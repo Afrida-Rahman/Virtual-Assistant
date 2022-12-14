@@ -1,3 +1,118 @@
 <resources>
-    <string name="app_name">Virtual-Assistant</string>
+    <string name="app_name">EMMA Virtual Therapist</string>
+    <string name="app_version">Version : 1.0.0-alpha04</string>
+    <string name="open">Open</string>
+    <string name="close">Close</string>
+    <string name="test_id">%s</string>
+    <string name="exercise_count">%d</string>
+    <string name="tfe_pe_request_permission">This app needs camera permission.</string>
+    <string name="tfe_pe_tv_score">Score: %.2f</string>
+    <string name="tfe_pe_tv_model">Model: </string>
+    <string name="tfe_pe_tv_time">Time: %.2f ms</string>
+    <string name="tfe_pe_tv_device">Device: </string>
+    <string name="hello">Hello</string>
+    <string name="exercise_name">Exercise Name</string>
+    <string name="Description">Description</string>
+    <string name="exercise_image">Exercise image</string>
+    <string name="exercise_list">Home Exercises</string>
+    <string name="exercise_assistant">I am your personal exercise assistant</string>
+    <string name="the_fetched_data">The Fetched Data:</string>
+    <string name="flip_camera">Flip Camera</string>
+    <string name="mymedicalhub">MyMedicalHUB</string>
+    <string name="your_personal_exercise_assistant">Your personal exercise assistant.</string>
+    <string name="camera_switching_button">Camera Switching Button</string>
+    <string name="sign_in">Sign In</string>
+    <string name="email_address">Email Address</string>
+    <string name="password">Password</string>
+    <string name="i_m_done">I\'m Done</string>
+    <string name="im_emma">I\'m EMMA</string>
+    <string name="hello_patient_name_i_m_emma">Hello %s.\nI\'m EMMA.</string>
+    <string name="log_out_button">Log Out button</string>
+    <string name="log_out">Log Out</string>
+
+    <string-array name="tfe_pe_models_array">
+        <item>Movenet Thunder</item>
+        <item>Movenet Lightning</item>
+        <item>Posenet</item>
+    </string-array>
+
+    <string-array name="tfe_pe_device_name">
+        <item>CPU</item>
+        <item>GPU</item>
+        <item>NNAPI</item>
+    </string-array>
+
+    <string-array name="tenant_name">
+        <item>EMMA</item>
+        <item>DEV</item>
+        <item>STG</item>
+        <item>NPC</item>
+    </string-array>
+
+    <string name="title_activity_dashboard">DashboardActivity</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="nav_header_title">Android Studio</string>
+    <string name="nav_header_subtitle">android.studio@android.com</string>
+    <string name="nav_header_desc">Navigation header</string>
+    <string name="action_settings">Settings</string>
+
+    <string name="menu_home">Home</string>
+    <string name="menu_gallery">Gallery</string>
+    <string name="menu_slideshow">Slideshow</string>
+    <string name="my_exercise">My Exercise</string>
+    <string name="fysical_score_victory_assessment">Fysical Score Victory Assessment</string>
+    <string name="posture_analysis">Posture Analysis</string>
+    <string name="pain_recorder">Pain Recorder</string>
+    <string name="appointment">Appointment</string>
+    <string name="assessment_list">My Assessments</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="active">Active</string>
+    <string name="guideline">Guideline</string>
+    <string name="guidelines">Guidelines</string>
+    <string name="instructions">Instructions</string>
+    <string name="exercise_images">Exercise Images</string>
+    <string name="instruction_details">Instruction details</string>
+    <string name="images">Images</string>
+    <string name="exercise_name_guideline">Exercise Name Guideline</string>
+    <string name="guideline_icon">guideline_icon</string>
+    <string name="assigned_set">Assigned set: %d</string>
+    <string name="assigned_repetition">Assigned repetition: %d per set</string>
+    <string name="back_button">Back button</string>
+    <string name="start_exercise">Start Exercise</string>
+    <string name="hello_i_am_emma">Hello! I am EMMA.</string>
+    <string name="select_tenant">Select Tenant</string>
+    <string name="tenant">Tenant</string>
+    <string name="manual_tracking">Manual Tracking</string>
+    <string name="try_again">Try Again</string>
+    <string name="reach_arms_over_head">reach_arms_over_head</string>
+    <string name="report_icon">Report Icon</string>
+    <string name="start_workout">Start Workout</string>
+    <string name="total_assigned_home_exercise">Total Assigned Home Exercise</string>
+    <string name="test_date">%s</string>
+    <string name="circular_background">Circular Background</string>
+    <string name="provider_name">Provider Name</string>
+    <string name="provider_name_value">%s</string>
+    <string name="body_region">Body Region</string>
+    <string name="body_region_value">%s</string>
+    <string name="registration_type">Registration Type</string>
+    <string name="registration_type_value">%s</string>
+    <string name="home_exercise_count">%d</string>
+    <string name="view_assigned_exercises">View Assigned Exercises</string>
+    <string name="right_count_text">%d/%d</string>
+    <string name="distance_text">%.1f</string>
+    <string name="wrong_text">%d</string>
+    <string name="time_count_text">%d</string>
+    <string name="phase_dialogue">%s</string>
+    <string name="rep_set">rep/set</string>
+    <string name="play_video">play_video</string>
+    <string name="max_time_hold">%d</string>
+    <string name="feet">feet</string>
+    <string name="wrong">wrong</string>
+    <string name="second">second</string>
+    <string name="exercise_video">Exercise Video</string>
+    <string name="back">Back</string>
+    <string name="forward">Forward</string>
+    <string name="exercise_gif">Exercise gif</string>
 </resources>
