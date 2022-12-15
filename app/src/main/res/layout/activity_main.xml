@@ -110,7 +110,7 @@
 
         <FrameLayout
             android:id="@+id/fragment_container"
-            android:name="org.tensorflow.lite.examples.poseestimation.AssessmentListFragment"
+            android:name="org.mmh.virtual_assistant.AssessmentListFragment"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
