@@ -81,4 +81,9 @@ dependencies {
 
     //CircularIndicator
     implementation 'me.relex:circleindicator:2.1.6'
+
+    //Tensorflow
+    implementation 'org.tensorflow:tensorflow-lite:2.5.0'
+    implementation 'org.tensorflow:tensorflow-lite-gpu:2.5.0'
+    implementation 'org.tensorflow:tensorflow-lite-support:0.2.0'
 }
