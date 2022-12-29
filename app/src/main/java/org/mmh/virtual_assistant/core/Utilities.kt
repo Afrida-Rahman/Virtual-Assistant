@@ -1,6 +1,8 @@
 package org.mmh.virtual_assistant.core
 
 import android.content.Context
+import android.graphics.PointF
+import android.graphics.RectF
 import org.mmh.virtual_assistant.SignInActivity
 import org.mmh.virtual_assistant.domain.model.APiUrl
 import org.mmh.virtual_assistant.domain.model.BodyPart
@@ -133,5 +135,12 @@ object Utilities {
             patientId = preferences.getString(SignInActivity.PATIENT_ID, "") ?: "",
             tenant = preferences.getString(SignInActivity.TENANT, "") ?: ""
         )
+    }
+
+    fun isPointInsideRectangle(
+        rectF: RectF,
+        point: PointF
+    ): Boolean {
+        return point.x > rectF.left && point.x < rectF.right && point.y > rectF.top && point.y < rectF.bottom
     }
 }

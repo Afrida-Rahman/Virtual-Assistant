@@ -2,9 +2,7 @@ package org.mmh.virtual_assistant.core
 
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
+import android.graphics.*
 import androidx.appcompat.app.AlertDialog
 import org.mmh.virtual_assistant.domain.model.BodyPart
 import org.mmh.virtual_assistant.domain.model.ConstraintType
@@ -39,16 +37,40 @@ object VisualizationUtils {
         input: Bitmap,
         person: Person,
         phase: Phase?,
-        isFrontCamera: Boolean = false
-    ): Bitmap {
+        isFrontCamera: Boolean = false,
+        enableAskQues: Boolean = false,
+    ): VizOutput {
+        var yesRectangle = RectF(0f,0f,0f,0f)
+        var noRectangle = RectF(0f,0f,0f,0f)
         val output = input.copy(Bitmap.Config.ARGB_8888, true)
         val canvas = Canvas(output)
         if (isFrontCamera) {
             canvas.scale(-1f, 1f, canvas.width.toFloat() / 2, canvas.height.toFloat() / 2)
         }
+
         val draw = Draw(canvas, Color.WHITE, LINE_WIDTH)
         val width = draw.canvas.width
         val height = draw.canvas.height
+
+        //if enableAskQues is enabled draw buttons on the image
+        if (enableAskQues){
+            var widthWidth = output.width
+
+            // Divide screen in 5 division
+            var singleDivSize = widthWidth / 5f
+
+            var topPadding = 40f
+            val cornerRadio = 16f
+            val testSize = 30f
+
+            // Draw NO button
+            noRectangle = RectF(singleDivSize, topPadding, singleDivSize*2, topPadding + 2*singleDivSize/3)
+            draw.button(noRectangle, cornerRadio, Color.RED, "NO", Color.BLACK, testSize)
+
+            // Draw YES button
+            yesRectangle = RectF(singleDivSize*3, topPadding, singleDivSize*4, topPadding + 2*singleDivSize/3)
+            draw.button(yesRectangle, cornerRadio, Color.GREEN, "YES", Color.BLACK, testSize)
+        }
 
         MAPPINGS.forEach { map ->
             val startPoint = person.keyPoints[map[0]].toCanvasPoint()
@@ -154,7 +176,7 @@ object VisualizationUtils {
                 _thickness = BORDER_WIDTH
             )
         }
-        return output
+        return VizOutput(output, noRectangle, yesRectangle)
     }
 
     fun isInsideBox(person: Person, canvasHeight: Int, canvasWidth: Int): Boolean {

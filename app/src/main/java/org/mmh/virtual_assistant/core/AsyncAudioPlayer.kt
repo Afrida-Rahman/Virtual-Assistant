@@ -174,6 +174,7 @@ class AsyncAudioPlayer(context: Context) {
         const val HALF_KNEELING_ON_LEFT = "half kneeling on left"
         const val HALF_KNEELING_ON_RIGHT = "half kneeling on right"
         const val KNEEL_UPRIGHT = "kneel upright"
+        const val DO_YOU_FEEL_ANY_PAIN = "do_you_feel_any_pain"
     }
 
     private val one = MediaPlayer.create(context, R.raw.one)
@@ -389,9 +390,11 @@ class AsyncAudioPlayer(context: Context) {
     private val halfKneelingOnLeft = MediaPlayer.create(context, R.raw.half_kneeling_on_left)
     private val halfKneelingOnRight = MediaPlayer.create(context, R.raw.half_kneeling_on_right)
     private val kneelUpright = MediaPlayer.create(context, R.raw.kneel_upright)
+    private val doYouFeelAnyPain = MediaPlayer.create(context, R.raw.do_you_feel_any_pain)
 
     fun playText(text: String) {
         when (text.lowercase()) {
+            DO_YOU_FEEL_ANY_PAIN -> doYouFeelAnyPain.start()
             LEAN_LEFT -> leanLeft.start()
             LEAN_RIGHT -> leanRight.start()
             RETURN -> returnAudio.start()

@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.*
+import android.graphics.Point
 import android.hardware.camera2.*
 import android.media.ImageReader
 import android.net.Uri
@@ -26,10 +27,9 @@ import kotlinx.coroutines.launch
 import org.mmh.virtual_assistant.api.IExerciseService
 import org.mmh.virtual_assistant.api.request.ExerciseTrackingPayload
 import org.mmh.virtual_assistant.api.response.ExerciseTrackingResponse
-import org.mmh.virtual_assistant.core.Exercises
-import org.mmh.virtual_assistant.core.ImageUtils
-import org.mmh.virtual_assistant.core.Utilities
-import org.mmh.virtual_assistant.core.VisualizationUtils
+import org.mmh.virtual_assistant.core.*
+import org.mmh.virtual_assistant.core.Utilities.isPointInsideRectangle
+import org.mmh.virtual_assistant.domain.model.BodyPart
 import org.mmh.virtual_assistant.domain.model.Device
 import org.mmh.virtual_assistant.domain.model.LogInData
 import org.mmh.virtual_assistant.exercise.home.HomeExercise
@@ -55,6 +55,7 @@ class ExerciseActivity : AppCompatActivity() {
     }
 
     private val lock = Any()
+    private var enableAskQues = false
     private lateinit var surfaceView: SurfaceView
     private lateinit var surfaceHolder: SurfaceHolder
     private var backgroundHandler: Handler? = null
@@ -98,6 +99,7 @@ class ExerciseActivity : AppCompatActivity() {
     private lateinit var maxHoldTimeDisplay: TextView
     private lateinit var exerciseProgressBar: ProgressBar
     private lateinit var gifButton: ImageButton
+
 
     private val stateCallback = object : CameraDevice.StateCallback() {
         override fun onOpened(camera: CameraDevice) {
@@ -256,8 +258,11 @@ class ExerciseActivity : AppCompatActivity() {
                 NoOfWrongCount = exercise.getWrongCount(),
                 Tenant = logInData.tenant
             )
-            askQuestions(this)
+//            askQuestions(this)
+
+            askVizQuestions(this)
         }
+
 
         findViewById<ImageButton>(R.id.camera_switch_button).setOnClickListener {
             isFrontCamera = !isFrontCamera
@@ -549,6 +554,8 @@ class ExerciseActivity : AppCompatActivity() {
     private fun processImage(bitmap: Bitmap) {
         var score = 0f
         var outputBitmap = bitmap
+        var cordRightWrist: PointF? = null
+        var vizOutput: VizOutput? = null
 
         if ((exercise.getSetCount() >= exercise.maxSetCount) && !showCongrats) {
             showCongrats = true
@@ -615,12 +622,24 @@ class ExerciseActivity : AppCompatActivity() {
 //                    outputBitmap = Bitmap.createScaledBitmap(
 //                        outputBitmap, 1080, 1080, false
 //                    )
-                    outputBitmap = VisualizationUtils.drawBodyKeyPoints(
+
+
+                    if (enableAskQues){
+                        for (keyPoint in person.keyPoints){
+                            if (keyPoint.bodyPart== BodyPart.RIGHT_WRIST && keyPoint.score > minConfidence){
+                                cordRightWrist = keyPoint.coordinate
+                            }
+                        }
+                    }
+
+                    vizOutput = VisualizationUtils.drawBodyKeyPoints(
                         input = outputBitmap,
                         person = person,
                         phase = phase,
-                        isFrontCamera = isFrontCamera
+                        isFrontCamera = isFrontCamera,
+                        enableAskQues
                     )
+                    outputBitmap = vizOutput!!.bitmap
                 }
             }
         }
@@ -656,6 +675,12 @@ class ExerciseActivity : AppCompatActivity() {
             Rect(left, top, right, bottom), Paint()
         )
         surfaceHolder.unlockCanvasAndPost(canvas)
+
+        // Process visual answer
+        if (enableAskQues && cordRightWrist != null){
+            processVisualAnswer(vizOutput!!.noRectF, vizOutput!!.yesRectF, cordRightWrist!!)
+        }
+
         tvScore.text = getString(R.string.tfe_pe_tv_score).format(score)
         poseDetector?.lastInferenceTimeNanos()?.let {
             tvTime.text =
@@ -687,6 +712,17 @@ class ExerciseActivity : AppCompatActivity() {
             negativeButtonText = null,
             negativeButtonAction = {}
         ).show()
+    }
+
+
+
+    private fun askVizQuestions(context: Context){
+        exercise.playInstruction(
+            1000L,
+            AsyncAudioPlayer.DO_YOU_FEEL_ANY_PAIN
+        )
+        enableAskQues = true
+        phaseDialogueDisplay.visibility = View.GONE
     }
 
     private fun askQuestions(context: Context) {
@@ -821,5 +857,35 @@ class ExerciseActivity : AppCompatActivity() {
         alertDialog.setPositiveButton("Okay") { _, _ ->
         }
         alertDialog.show()
+    }
+
+    private fun processVisualAnswer(noRectF: RectF, yesRectF: RectF, cordRightWrist: PointF){
+        var negAnswer = isPointInsideRectangle(noRectF, cordRightWrist)
+        var posAnswer = isPointInsideRectangle(yesRectF, cordRightWrist)
+        if ((negAnswer && !isFrontCamera) || (posAnswer && isFrontCamera)){ // Answer is negative
+            finish()
+        } else if ((posAnswer && !isFrontCamera) || (negAnswer && isFrontCamera)){ // Answer is positive
+            enableAskQues = false
+            runOnUiThread {
+                val askForTracking = VisualizationUtils.getAlertDialogue(
+                    context = this,
+                    message = "Do you want to track your pain with EMMA?",
+                    positiveButtonText = "Yes",
+                    positiveButtonAction = {
+                        val intent = Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse("https://emma.mypainlog.ai/#/new-screenings?patientid=${logInData.patientId}&type=refer&refertype=painlog&autologin=true")
+                        )
+                        startActivity(intent)
+                        finish()
+                    },
+                    negativeButtonText = "No",
+                    negativeButtonAction = {
+                        finish()
+                    }
+                )
+                askForTracking.show()
+            }
+        }
     }
 }

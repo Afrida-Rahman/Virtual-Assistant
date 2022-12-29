@@ -1,9 +1,6 @@
 package org.mmh.virtual_assistant.core
 
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.RectF
+import android.graphics.*
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -161,5 +158,31 @@ class Draw(
             style = lineType
         }
         canvas.drawRect(left, top, right, bottom, rectangleStyle)
+    }
+
+    // Draws a rectangular shaped with round corners button with a text in the centre
+    fun button(rectF: RectF, cornerRadio: Float, color: Int, text: String, textColor: Int, textSize: Float){
+        val rectStyle = Paint().apply {
+            this.color = color
+            style = Paint.Style.FILL_AND_STROKE
+            strokeWidth = 5f
+        }
+        canvas.drawRoundRect(
+            rectF,
+            cornerRadio,
+            cornerRadio,
+            rectStyle
+        )
+        var textWidth = 0f
+        var textSmallGlyphHeight = 0f
+        val textStyle = Paint().apply {
+            this.color = textColor
+            this.textSize = textSize
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            style = Paint.Style.FILL
+            textWidth = measureText(text)
+            textSmallGlyphHeight = fontMetrics.run { ascent + descent }
+        }
+        canvas.drawText(text, rectF.left+((rectF.right-rectF.left)-textWidth)/2f, rectF.top+(2*(rectF.right-rectF.left)/3-textSmallGlyphHeight)/2f, textStyle)
     }
 }

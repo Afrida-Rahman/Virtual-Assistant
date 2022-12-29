@@ -84,7 +84,6 @@ class MoveNet(private val interpreter: Interpreter) : PoseDetector {
                 rect.top,
                 Paint()
             )
-            Log.d("output", "new : ${detectBitmap.width} - ${detectBitmap.height}")
             val inputTensor = processInputImage(detectBitmap, inputWidth, inputHeight)
             val outputTensor = TensorBuffer.createFixedSize(outputShape, DataType.FLOAT32)
             val widthRatio = detectBitmap.width.toFloat() / inputWidth
