@@ -10,6 +10,7 @@ import android.graphics.Point
 import android.hardware.camera2.*
 import android.media.ImageReader
 import android.net.Uri
+import android.opengl.Visibility
 import android.os.*
 import android.util.Log
 import android.util.Size
@@ -26,6 +27,8 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import org.mmh.virtual_assistant.api.IExerciseService
 import org.mmh.virtual_assistant.api.request.ExerciseTrackingPayload
+import org.mmh.virtual_assistant.api.request.PhaseSummary
+import org.mmh.virtual_assistant.api.request.QResponse
 import org.mmh.virtual_assistant.api.response.ExerciseTrackingResponse
 import org.mmh.virtual_assistant.core.*
 import org.mmh.virtual_assistant.core.Utilities.isPointInsideRectangle
@@ -90,6 +93,7 @@ class ExerciseActivity : AppCompatActivity() {
     private var testId: String? = ""
     private var exerciseId: Int = 0
     private var protocolId: Int = 0
+    private var qResponse = mutableListOf<QResponse>()
 
     private lateinit var countDisplay: TextView
     private lateinit var distanceDisplay: TextView
@@ -99,6 +103,7 @@ class ExerciseActivity : AppCompatActivity() {
     private lateinit var maxHoldTimeDisplay: TextView
     private lateinit var exerciseProgressBar: ProgressBar
     private lateinit var gifButton: ImageButton
+    private lateinit var question: VisQuestion
 
 
     private val stateCallback = object : CameraDevice.StateCallback() {
@@ -247,20 +252,19 @@ class ExerciseActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.exercise_name).text = exerciseName
 
         findViewById<Button>(R.id.btn_done).setOnClickListener {
-            saveExerciseData(
-                ExerciseId = exerciseId,
-                TestId = testId!!,
-                ProtocolId = protocolId,
-                PatientId = logInData.patientId,
-                ExerciseDate = Utilities.currentDate(),
-                NoOfReps = exercise.getRepetitionCount(),
-                NoOfSets = exercise.getSetCount(),
-                NoOfWrongCount = exercise.getWrongCount(),
-                Tenant = logInData.tenant
-            )
+//            saveExerciseData(
+//                ExerciseId = exerciseId,
+//                TestId = testId!!,
+//                ProtocolId = protocolId,
+//                PatientId = logInData.patientId,
+//                ExerciseDate = Utilities.currentDate(),
+//                NoOfReps = exercise.getRepetitionCount(),
+//                NoOfSets = exercise.getSetCount(),
+//                NoOfWrongCount = exercise.getWrongCount(),
+//                Tenant = logInData.tenant
+//            )
 //            askQuestions(this)
-
-            askVizQuestions(this)
+            askVizQuestions(this, 0)
         }
 
 
@@ -317,8 +321,10 @@ class ExerciseActivity : AppCompatActivity() {
             x = display.width
             y = display.height
         }
-        screenDimensions[0] = if (orientation == Configuration.ORIENTATION_PORTRAIT) x else y // width
-        screenDimensions[1] = if (orientation == Configuration.ORIENTATION_PORTRAIT) y else x // height
+        screenDimensions[0] =
+            if (orientation == Configuration.ORIENTATION_PORTRAIT) x else y // width
+        screenDimensions[1] =
+            if (orientation == Configuration.ORIENTATION_PORTRAIT) y else x // height
         return screenDimensions
     }
 
@@ -569,64 +575,88 @@ class ExerciseActivity : AppCompatActivity() {
                 if (score > minConfidence) {
                     val height = bitmap.height
                     val width = bitmap.width
-                    if (!showCongrats) {
+                    if (!showCongrats && !enableAskQues) {
                         exercise.rightExerciseCount(person, height, width)
                         exercise.wrongExerciseCount(person, height, width)
                     }
                     val phase = exercise.getPhase()
                     MainScope().launch {
-                        countDisplay.text = getString(R.string.right_count_text).format(
-                            exercise.getRepetitionCount(),
-                            exercise.getSetCount()
-                        )
-                        exercise.getPersonDistance(person)?.let {
-                            distanceDisplay.text = getString(R.string.distance_text).format(it)
-                            if (it <= 5f) {
-                                phaseDialogueDisplay.textSize = 30f
-                            } else if (5f < it && it <= 10f) {
-                                phaseDialogueDisplay.textSize = 50f
-                            } else {
-                                phaseDialogueDisplay.textSize = 70f
-                            }
-                        }
-
-                        wrongCountDisplay.text =
-                            getString(R.string.wrong_text).format(exercise.getWrongCount())
-                        phase?.let {
-                            val timeToDisplay = exercise.getHoldTimeLimitCount()
-                            it.phaseDialogue?.let { dialogue ->
-                                if (dialogue.isNotEmpty()) {
-                                    phaseDialogueDisplay.visibility = View.VISIBLE
-                                    phaseDialogueDisplay.text =
-                                        getString(R.string.phase_dialogue).format(dialogue)
+                        if (enableAskQues) {
+                            findViewById<Button>(R.id.btn_done).visibility = View.GONE
+                            exercise.getPersonDistance(person)?.let {
+                                distanceDisplay.text = getString(R.string.distance_text).format(it)
+                                if (it <= 5f) {
+                                    phaseDialogueDisplay.textSize = 30f
+                                } else if (5f < it && it <= 10f) {
+                                    phaseDialogueDisplay.textSize = 50f
                                 } else {
-                                    phaseDialogueDisplay.visibility = View.GONE
+                                    phaseDialogueDisplay.textSize = 70f
                                 }
                             }
-                            if (timeToDisplay > 0) {
-                                timeCountDisplay.visibility = View.VISIBLE
-                                timeCountDisplay.text =
-                                    getString(R.string.time_count_text).format(timeToDisplay)
-                            } else {
-                                timeCountDisplay.visibility = View.GONE
-                                timeCountDisplay.text =
-                                    getString(R.string.time_count_text).format(0)
+                            phaseDialogueDisplay.visibility = View.VISIBLE
+                            when (question) {
+                                VisQuestion.DO_YOU_FIND_THIS_EXERCISE_TO_BE_TOO_PAINFUL -> {
+                                    phaseDialogueDisplay.text =
+                                        "do_you_find_this_exercise_to_be_too_painful"
+                                }
+                                VisQuestion.DID_YOU_FIND_THIS_EXERCISE_TO_BE_TOO_DIFFICULT -> {
+                                    phaseDialogueDisplay.text =
+                                        "did_you_find_this_exercise_to_be_too_difficult"
+                                }
+                                VisQuestion.WAS_THIS_EXERCISE_TOO_EASY -> {
+                                    phaseDialogueDisplay.text = "was_this_exercise_too_easy"
+                                }
                             }
+                        } else {
+                            countDisplay.text = getString(R.string.right_count_text).format(
+                                exercise.getRepetitionCount(),
+                                exercise.getSetCount()
+                            )
+                            exercise.getPersonDistance(person)?.let {
+                                distanceDisplay.text = getString(R.string.distance_text).format(it)
+                                if (it <= 5f) {
+                                    phaseDialogueDisplay.textSize = 30f
+                                } else if (5f < it && it <= 10f) {
+                                    phaseDialogueDisplay.textSize = 50f
+                                } else {
+                                    phaseDialogueDisplay.textSize = 70f
+                                }
+                            }
+
+                            wrongCountDisplay.text =
+                                getString(R.string.wrong_text).format(exercise.getWrongCount())
+
+                            phase?.let {
+                                val timeToDisplay = exercise.getHoldTimeLimitCount()
+                                it.phaseDialogue?.let { dialogue ->
+                                    if (dialogue.isNotEmpty()) {
+                                        phaseDialogueDisplay.visibility = View.VISIBLE
+                                        phaseDialogueDisplay.text =
+                                            getString(R.string.phase_dialogue).format(dialogue)
+                                    } else {
+                                        phaseDialogueDisplay.visibility = View.GONE
+                                    }
+                                }
+                                if (timeToDisplay > 0) {
+                                    timeCountDisplay.visibility = View.VISIBLE
+                                    timeCountDisplay.text =
+                                        getString(R.string.time_count_text).format(timeToDisplay)
+                                } else {
+                                    timeCountDisplay.visibility = View.GONE
+                                    timeCountDisplay.text =
+                                        getString(R.string.time_count_text).format(0)
+                                }
+                            }
+                            maxHoldTimeDisplay.text =
+                                getString(R.string.max_time_hold).format(exercise.getMaxHoldTime())
+                            exerciseProgressBar.progress =
+                                exercise.getSetCount() * exercise.maxRepCount + exercise.getRepetitionCount()
                         }
-                        maxHoldTimeDisplay.text =
-                            getString(R.string.max_time_hold).format(exercise.getMaxHoldTime())
-                        exerciseProgressBar.progress =
-                            exercise.getSetCount() * exercise.maxRepCount + exercise.getRepetitionCount()
                     }
 
-//                    outputBitmap = Bitmap.createScaledBitmap(
-//                        outputBitmap, 1080, 1080, false
-//                    )
-
-
-                    if (enableAskQues){
-                        for (keyPoint in person.keyPoints){
-                            if (keyPoint.bodyPart== BodyPart.RIGHT_WRIST && keyPoint.score > minConfidence){
+                    if (enableAskQues) {
+                        for (keyPoint in person.keyPoints) {
+                            if (keyPoint.bodyPart == BodyPart.RIGHT_WRIST && keyPoint.score > minConfidence) {
                                 cordRightWrist = keyPoint.coordinate
                             }
                         }
@@ -637,7 +667,8 @@ class ExerciseActivity : AppCompatActivity() {
                         person = person,
                         phase = phase,
                         isFrontCamera = isFrontCamera,
-                        enableAskQues
+                        consideredIndices = exercise.consideredIndices.toList(),
+                        enableAskQues = enableAskQues
                     )
                     outputBitmap = vizOutput!!.bitmap
                 }
@@ -677,7 +708,7 @@ class ExerciseActivity : AppCompatActivity() {
         surfaceHolder.unlockCanvasAndPost(canvas)
 
         // Process visual answer
-        if (enableAskQues && cordRightWrist != null){
+        if (enableAskQues && cordRightWrist != null) {
             processVisualAnswer(vizOutput!!.noRectF, vizOutput!!.yesRectF, cordRightWrist!!)
         }
 
@@ -689,25 +720,13 @@ class ExerciseActivity : AppCompatActivity() {
     }
 
     private fun congratsPatient(context: Context) {
-        saveExerciseData(
-            ExerciseId = exerciseId,
-            TestId = testId!!,
-            ProtocolId = protocolId,
-            PatientId = logInData.patientId,
-            ExerciseDate = Utilities.currentDate(),
-            NoOfReps = exercise.getRepetitionCount(),
-            NoOfSets = exercise.getSetCount(),
-            NoOfWrongCount = exercise.getWrongCount(),
-            Tenant = logInData.tenant
-        )
-
-        Log.d("getExercise", "$ExerciseId, $testId, $protocolId")
         VisualizationUtils.getAlertDialogue(
             context = context,
             message = "Congratulations! You have successfully completed the exercise. Please be prepared for the next one.",
             positiveButtonText = "Ok",
             positiveButtonAction = {
-                askQuestions(context)
+//                askQuestions(context)
+                askVizQuestions(context, 0)
             },
             negativeButtonText = null,
             negativeButtonAction = {}
@@ -715,14 +734,36 @@ class ExerciseActivity : AppCompatActivity() {
     }
 
 
-
-    private fun askVizQuestions(context: Context){
-        exercise.playInstruction(
-            1000L,
-            AsyncAudioPlayer.DO_YOU_FEEL_ANY_PAIN
-        )
+    private fun askVizQuestions(context: Context, serial: Int) {
         enableAskQues = true
-        phaseDialogueDisplay.visibility = View.GONE
+        when (serial) {
+            0 -> {
+                question = VisQuestion.DID_YOU_FIND_THIS_EXERCISE_TO_BE_TOO_DIFFICULT
+                exercise.playInstruction(
+                    1000L,
+                    AsyncAudioPlayer.DID_YOU_FIND_THIS_EXERCISE_TO_BE_TOO_DIFFICULT
+                )
+            }
+            1 -> {
+                question = VisQuestion.WAS_THIS_EXERCISE_TOO_EASY
+                exercise.playInstruction(
+                    1000L,
+                    AsyncAudioPlayer.WAS_THIS_EXERCISE_TOO_EASY
+                )
+            }
+            2 -> {
+                question = VisQuestion.DO_YOU_FIND_THIS_EXERCISE_TO_BE_TOO_PAINFUL
+                exercise.playInstruction(
+                    1000L,
+                    AsyncAudioPlayer.DO_YOU_FIND_THIS_EXERCISE_TO_BE_TOO_PAINFUL
+                )
+            }
+        }
+
+    }
+
+    private fun setVisQuestions() {
+
     }
 
     private fun askQuestions(context: Context) {
@@ -758,15 +799,20 @@ class ExerciseActivity : AppCompatActivity() {
     }
 
     private fun saveExerciseData(
-        ExerciseId: Int,
-        TestId: String,
-        ProtocolId: Int,
+        Tenant: String,
         PatientId: String,
+        TestId: String,
+        ExerciseId: Int,
+        ProtocolId: Int,
         ExerciseDate: String,
+        AssignSets: Int = 0,
+        AssignReps: Int = 0,
         NoOfReps: Int,
         NoOfSets: Int,
         NoOfWrongCount: Int,
-        Tenant: String
+        TotalTime: Int = 0,
+        Phases: List<PhaseSummary>,
+        Responses: List<QResponse>
     ) {
         val logInData = loadLogInData()
         saveExerciseTrackingURL = Utilities.getUrl(logInData.tenant).saveExerciseTrackingURL
@@ -778,15 +824,27 @@ class ExerciseActivity : AppCompatActivity() {
             .create(IExerciseService::class.java)
 
         val requestPayload = ExerciseTrackingPayload(
-            ExerciseId = ExerciseId,
-            TestId = TestId,
-            ProtocolId = ProtocolId,
+            Tenant = Tenant,
             PatientId = PatientId,
+            TestId = TestId,
+            ExerciseId = ExerciseId,
+            ProtocolId = ProtocolId,
+            AssignSets = AssignSets,
+            AssignReps = AssignReps,
             ExerciseDate = ExerciseDate,
             NoOfReps = NoOfReps,
             NoOfSets = NoOfSets,
             NoOfWrongCount = NoOfWrongCount,
-            Tenant = Tenant
+            TotalTime = TotalTime,
+            Phases = Phases,
+            Responses = Responses
+        )
+        Log.d(
+            "setCount",
+            "\n \n Tenant = $Tenant \n PatientId = $PatientId \n TestId = $TestId \n ExerciseId = $ExerciseId \n " +
+                    "ProtocolId = $ProtocolId \n AssignSets = $AssignSets \n AssignReps = $AssignReps \n ExerciseDate = $ExerciseDate \n" +
+                    "NoOfReps = $NoOfReps \nNoOfSets = $NoOfSets \n NoOfWrongCount = $NoOfWrongCount \n TotalTime = $TotalTime \n " +
+                    "Phases = $Phases \n,Responses = $Responses"
         )
         val response = service.saveExerciseData(requestPayload)
         response.enqueue(object : Callback<ExerciseTrackingResponse> {
@@ -859,32 +917,138 @@ class ExerciseActivity : AppCompatActivity() {
         alertDialog.show()
     }
 
-    private fun processVisualAnswer(noRectF: RectF, yesRectF: RectF, cordRightWrist: PointF){
+    private fun processVisualAnswer(noRectF: RectF, yesRectF: RectF, cordRightWrist: PointF) {
         var negAnswer = isPointInsideRectangle(noRectF, cordRightWrist)
         var posAnswer = isPointInsideRectangle(yesRectF, cordRightWrist)
-        if ((negAnswer && !isFrontCamera) || (posAnswer && isFrontCamera)){ // Answer is negative
-            finish()
-        } else if ((posAnswer && !isFrontCamera) || (negAnswer && isFrontCamera)){ // Answer is positive
-            enableAskQues = false
-            runOnUiThread {
-                val askForTracking = VisualizationUtils.getAlertDialogue(
-                    context = this,
-                    message = "Do you want to track your pain with EMMA?",
-                    positiveButtonText = "Yes",
-                    positiveButtonAction = {
-                        val intent = Intent(
-                            Intent.ACTION_VIEW,
-                            Uri.parse("https://emma.mypainlog.ai/#/new-screenings?patientid=${logInData.patientId}&type=refer&refertype=painlog&autologin=true")
+        if ((negAnswer && !isFrontCamera) || (posAnswer && isFrontCamera)) { // Answer is negative
+            when (question) {
+                VisQuestion.DO_YOU_FIND_THIS_EXERCISE_TO_BE_TOO_PAINFUL -> {
+                    qResponse.add(
+                        QResponse(
+                            QuestionId = 10001002,
+                            AnswerId = 61893,
+                            AnswerValue = "No"
                         )
-                        startActivity(intent)
-                        finish()
-                    },
-                    negativeButtonText = "No",
-                    negativeButtonAction = {
-                        finish()
-                    }
-                )
-                askForTracking.show()
+                    )
+                    saveExerciseData(
+                        Tenant = logInData.tenant,
+                        PatientId = logInData.patientId,
+                        TestId = testId!!,
+                        ExerciseId = exerciseId,
+                        ProtocolId = protocolId,
+                        ExerciseDate = Utilities.currentDate(),
+                        NoOfReps = exercise.getRepetitionCount(),
+                        NoOfSets = exercise.getSetCount(),
+                        NoOfWrongCount = exercise.getWrongCount(),
+                        AssignSets = exercise.maxSetCount,
+                        AssignReps = exercise.maxRepCount,
+                        TotalTime = 0,
+                        Phases = exercise.getPhaseSummary(),
+                        Responses = qResponse
+                    )
+                    finish()
+                }
+                VisQuestion.WAS_THIS_EXERCISE_TOO_EASY -> {
+                    qResponse.add(
+                        QResponse(
+                            QuestionId = 10001001,
+                            AnswerId = 61891,
+                            AnswerValue = "No"
+                        )
+                    )
+                    askVizQuestions(applicationContext, 2)
+                }
+                VisQuestion.DID_YOU_FIND_THIS_EXERCISE_TO_BE_TOO_DIFFICULT -> {
+                    qResponse.add(
+                        QResponse(
+                            QuestionId = 10001000,
+                            AnswerId = 61889,
+                            AnswerValue = "No"
+                        )
+                    )
+                    askVizQuestions(applicationContext, 1)
+                }
+            }
+        } else if ((posAnswer && !isFrontCamera) || (negAnswer && isFrontCamera)) { // Answer is positive
+            when (question) {
+                VisQuestion.DID_YOU_FIND_THIS_EXERCISE_TO_BE_TOO_DIFFICULT -> {
+                    qResponse.add(
+                        QResponse(
+                            QuestionId = 10001002,
+                            AnswerId = 61894,
+                            AnswerValue = "Yes"
+                        )
+                    )
+                    saveExerciseData(
+                        Tenant = logInData.tenant,
+                        PatientId = logInData.patientId,
+                        TestId = testId!!,
+                        ExerciseId = exerciseId,
+                        ProtocolId = protocolId,
+                        ExerciseDate = Utilities.currentDate(),
+                        NoOfReps = exercise.getRepetitionCount(),
+                        NoOfSets = exercise.getSetCount(),
+                        NoOfWrongCount = exercise.getWrongCount(),
+                        AssignSets = exercise.maxSetCount,
+                        AssignReps = exercise.maxRepCount,
+                        TotalTime = 0,
+                        Phases = exercise.getPhaseSummary(),
+                        Responses = qResponse
+                    )
+                    finish()
+                }
+                VisQuestion.WAS_THIS_EXERCISE_TOO_EASY -> {
+                    qResponse.add(
+                        QResponse(
+                            QuestionId = 10001001,
+                            AnswerId = 61892,
+                            AnswerValue = "Yes"
+                        )
+                    )
+                    saveExerciseData(
+                        Tenant = logInData.tenant,
+                        PatientId = logInData.patientId,
+                        TestId = testId!!,
+                        ExerciseId = exerciseId,
+                        ProtocolId = protocolId,
+                        ExerciseDate = Utilities.currentDate(),
+                        NoOfReps = exercise.getRepetitionCount(),
+                        NoOfSets = exercise.getSetCount(),
+                        NoOfWrongCount = exercise.getWrongCount(),
+                        AssignSets = exercise.maxSetCount,
+                        AssignReps = exercise.maxRepCount,
+                        TotalTime = 0,
+                        Phases = exercise.getPhaseSummary(),
+                        Responses = qResponse
+                    )
+                    finish()
+                }
+                VisQuestion.DO_YOU_FIND_THIS_EXERCISE_TO_BE_TOO_PAINFUL -> {
+                    qResponse.add(
+                        QResponse(
+                            QuestionId = 10001000,
+                            AnswerId = 61890,
+                            AnswerValue = "Yes"
+                        )
+                    )
+                    saveExerciseData(
+                        Tenant = logInData.tenant,
+                        PatientId = logInData.patientId,
+                        TestId = testId!!,
+                        ExerciseId = exerciseId,
+                        ProtocolId = protocolId,
+                        ExerciseDate = Utilities.currentDate(),
+                        NoOfReps = exercise.getRepetitionCount(),
+                        NoOfSets = exercise.getSetCount(),
+                        NoOfWrongCount = exercise.getWrongCount(),
+                        AssignSets = exercise.maxSetCount,
+                        AssignReps = exercise.maxRepCount,
+                        TotalTime = 0,
+                        Phases = exercise.getPhaseSummary(),
+                        Responses = qResponse
+                    )
+                    finish()
+                }
             }
         }
     }

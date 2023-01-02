@@ -8,4 +8,4 @@ class SingleArmRaiseInProne(
 ) : HomeExercise(
     context = context,
     id = 500
-) {}
+)

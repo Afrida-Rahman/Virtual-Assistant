@@ -10,6 +10,7 @@ import org.mmh.virtual_assistant.domain.model.Person
 import org.mmh.virtual_assistant.domain.model.Phase
 
 object VisualizationUtils {
+    const val MIN_CONFIDENCE = 0.3f
     private const val LINE_WIDTH = 3f
     private const val BORDER_WIDTH = 10f
     private var lastTimeChecked: Long = 0L
@@ -36,6 +37,7 @@ object VisualizationUtils {
     fun drawBodyKeyPoints(
         input: Bitmap,
         person: Person,
+        consideredIndices: List<Int>,
         phase: Phase?,
         isFrontCamera: Boolean = false,
         enableAskQues: Boolean = false,
@@ -63,13 +65,20 @@ object VisualizationUtils {
             val cornerRadio = 16f
             val testSize = 30f
 
+            // get nose point to dynamically change button position
+            for (keyPoint in person.keyPoints){
+                if (keyPoint.bodyPart== BodyPart.NOSE && keyPoint.score > .2f){
+                    topPadding = keyPoint.coordinate.y
+                }
+            }
+
             // Draw NO button
-            noRectangle = RectF(singleDivSize, topPadding, singleDivSize*2, topPadding + 2*singleDivSize/3)
-            draw.button(noRectangle, cornerRadio, Color.RED, "NO", Color.BLACK, testSize)
+            noRectangle = RectF(.1f*singleDivSize, topPadding, 1.1f*singleDivSize, topPadding + 2*singleDivSize/3)
+            draw.button(noRectangle, cornerRadio, Color.parseColor("#FF3700B3"), "NO", Color.parseColor("#F44336"), testSize)
 
             // Draw YES button
-            yesRectangle = RectF(singleDivSize*3, topPadding, singleDivSize*4, topPadding + 2*singleDivSize/3)
-            draw.button(yesRectangle, cornerRadio, Color.GREEN, "YES", Color.BLACK, testSize)
+            yesRectangle = RectF(3.9f*singleDivSize, topPadding, 4.9f*singleDivSize, topPadding + 2*singleDivSize/3)
+            draw.button(yesRectangle, cornerRadio, Color.parseColor("#FF3700B3"), "YES", Color.parseColor("#66BB6A"), testSize)
         }
 
         MAPPINGS.forEach { map ->
@@ -166,7 +175,7 @@ object VisualizationUtils {
                 }
             }
         }
-        if (!isInsideBox(person, height, width)) {
+        if (!isInsideBox(person, consideredIndices, height, width)) {
             draw.tetragonal(
                 Point(0f, 0f),
                 Point(0f, height.toFloat()),
@@ -179,13 +188,20 @@ object VisualizationUtils {
         return VizOutput(output, noRectangle, yesRectangle)
     }
 
-    fun isInsideBox(person: Person, canvasHeight: Int, canvasWidth: Int): Boolean {
+    fun isInsideBox(
+        person: Person,
+        consideredIndices: List<Int>,
+        canvasHeight: Int,
+        canvasWidth: Int
+    ): Boolean {
         var rightPosition = true
         person.keyPoints.forEach {
-            val x = it.coordinate.x
-            val y = it.coordinate.y
-            if (x < 0 || x > canvasWidth || y < 0 || y > canvasHeight) {
-                rightPosition = false
+            if (it.bodyPart.position in consideredIndices) {
+                val x = it.coordinate.x
+                val y = it.coordinate.y
+                if (x < 0 || x > canvasWidth || y < 0 || y > canvasHeight) {
+                    rightPosition = false
+                }
             }
         }
         return rightPosition

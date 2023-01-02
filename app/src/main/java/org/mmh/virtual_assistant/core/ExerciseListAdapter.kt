@@ -19,6 +19,8 @@ import org.mmh.virtual_assistant.ExerciseGuidelineFragment
 import org.mmh.virtual_assistant.R
 import org.mmh.virtual_assistant.api.IExerciseService
 import org.mmh.virtual_assistant.api.request.ExerciseTrackingPayload
+import org.mmh.virtual_assistant.api.request.PhaseSummary
+import org.mmh.virtual_assistant.api.request.QResponse
 import org.mmh.virtual_assistant.api.response.ExerciseTrackingResponse
 import org.mmh.virtual_assistant.exercise.home.HomeExercise
 import retrofit2.Call
@@ -114,16 +116,21 @@ class ExerciseListAdapter(
                     val wrongText = wrongInput.text.toString().toInt()
 
                     saveManualTrackingData(
-                        ExerciseId = exercise.id,
-                        TestId = testId,
-                        ProtocolId = exercise.protocolId,
+                        Tenant = tenant,
                         PatientId = patientId,
+                        TestId = testId,
+                        ExerciseId = exercise.id,
+                        ProtocolId = exercise.protocolId,
                         ExerciseDate = Utilities.currentDate(),
                         NoOfReps = setText,
                         NoOfSets = repText,
                         NoOfWrongCount = wrongText,
-                        Tenant = tenant,
-                        context = it.context
+                        context = it.context,
+                        AssignReps = repText,
+                        AssignSets = setText,
+                        TotalTime = 0,
+                        Phases = exercise.getPhaseSummary(),
+                        Responses = listOf()
                     )
                 }
                 alertDialog.setNegativeButton("Cancel") { alert, _ -> alert.cancel() }
@@ -158,15 +165,20 @@ class ExerciseListAdapter(
     }
 
     private fun saveManualTrackingData(
-        ExerciseId: Int,
-        TestId: String,
-        ProtocolId: Int,
+        Tenant: String,
         PatientId: String,
+        TestId: String,
+        ExerciseId: Int,
+        ProtocolId: Int,
         ExerciseDate: String,
+        AssignSets: Int,
+        AssignReps: Int,
         NoOfReps: Int,
         NoOfSets: Int,
         NoOfWrongCount: Int = 0,
-        Tenant: String,
+        TotalTime: Int = 0,
+        Phases: List<PhaseSummary>,
+        Responses: List<QResponse>,
         context: Context
     ) {
         val saveExerciseTrackingURL = Utilities.getUrl(tenant).saveExerciseTrackingURL
@@ -177,15 +189,20 @@ class ExerciseListAdapter(
             .create(IExerciseService::class.java)
 
         val requestPayload = ExerciseTrackingPayload(
-            ExerciseId = ExerciseId,
-            TestId = TestId,
-            ProtocolId = ProtocolId,
+            Tenant = Tenant,
             PatientId = PatientId,
+            TestId = TestId,
+            ExerciseId = ExerciseId,
+            ProtocolId = ProtocolId,
+            AssignSets = AssignSets,
+            AssignReps = AssignReps,
             ExerciseDate = ExerciseDate,
             NoOfReps = NoOfReps,
             NoOfSets = NoOfSets,
             NoOfWrongCount = NoOfWrongCount,
-            Tenant = Tenant
+            TotalTime = TotalTime,
+            Phases = Phases,
+            Responses = Responses
         )
         val response = service.saveExerciseData(requestPayload)
         response.enqueue(object : Callback<ExerciseTrackingResponse> {
