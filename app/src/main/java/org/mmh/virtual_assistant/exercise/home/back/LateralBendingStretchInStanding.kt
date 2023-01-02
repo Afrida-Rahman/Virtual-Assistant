@@ -7,4 +7,4 @@ class LateralBendingStretchInStanding(
     context: Context
 ) : HomeExercise(
     context = context, id = 156
-) {}
+)

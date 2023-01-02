@@ -117,7 +117,6 @@ class ExerciseListActivity : AppCompatActivity() {
                         responseBody.Exercises.forEach { exercise ->
                             val implementedExercise =
                                 implementedExerciseList.find { it.id == exercise.ExerciseId }
-
                             if (implementedExercise != null) {
                                 implementedExercise.setExercise(
                                     exerciseName = exercise.ExerciseName,
@@ -126,14 +125,15 @@ class ExerciseListActivity : AppCompatActivity() {
                                     exerciseVideoUrls = exercise.ExerciseMedia,
                                     repetitionLimit = exercise.RepetitionInCount,
                                     setLimit = exercise.SetInCount,
-                                    protoId = exercise.ProtocolId
+                                    protoId = exercise.ProtocolId,
+                                    phases = exercise.Phases
                                 )
                                 parsedExercises.add(implementedExercise)
                             } else {
                                 val notImplementedExercise = GeneralExercise(
                                     context = this@ExerciseListActivity,
                                     exerciseId = exercise.ExerciseId,
-                                    active = false
+                                    active = true
                                 )
                                 notImplementedExercise.setExercise(
                                     exerciseName = exercise.ExerciseName,
@@ -142,7 +142,8 @@ class ExerciseListActivity : AppCompatActivity() {
                                     exerciseVideoUrls = exercise.ExerciseMedia,
                                     repetitionLimit = exercise.RepetitionInCount,
                                     setLimit = exercise.SetInCount,
-                                    protoId = exercise.ProtocolId
+                                    protoId = exercise.ProtocolId,
+                                    phases = exercise.Phases
                                 )
                                 parsedExercises.add(notImplementedExercise)
                             }

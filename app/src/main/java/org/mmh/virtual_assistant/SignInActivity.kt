@@ -10,8 +10,8 @@ import androidx.appcompat.app.AppCompatActivity
 import org.mmh.virtual_assistant.api.ILogInService
 import org.mmh.virtual_assistant.api.request.LogInRequest
 import org.mmh.virtual_assistant.api.response.LogInResponse
-import org.mmh.virtual_assistant.databinding.ActivitySignInBinding
 import org.mmh.virtual_assistant.core.Utilities
+import org.mmh.virtual_assistant.databinding.ActivitySignInBinding
 import org.mmh.virtual_assistant.domain.model.LogInData
 import retrofit2.Call
 import retrofit2.Callback

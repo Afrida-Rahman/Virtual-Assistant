@@ -21,7 +21,7 @@ interface IExerciseService {
     @POST("/api/exercisekeypoint/GetPatientExercises")
     fun getExerciseList(@Body requestPayload: ExerciseListRequestPayload): Call<ExerciseListResponse>
 
-    @POST("/api/exercisekeypoint/GetKeyPointsRestriction")
+    @POST("/api/exercisekeypoint/GetPatientExerciseRestrictions")
     fun getExerciseConstraint(@Body requestPayload: ExerciseRequestPayload): Call<KeyPointRestrictions>
 
     @Headers("Authorization: Bearer YXBpdXNlcjpZV2xoYVlUUmNHbDFjMlZ5T2lRa1RVWVRFUk1ESXc=")

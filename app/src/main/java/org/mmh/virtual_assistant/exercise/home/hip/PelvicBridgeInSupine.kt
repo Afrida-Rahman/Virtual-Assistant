@@ -12,7 +12,7 @@ class PelvicBridgeInSupine(
 ) : HomeExercise(
     context = context, id = 122
 ) {
-    override fun instruction(person: Person) {
+    override fun exerciseInstruction(person: Person) {
         this.getPhase()?.let {
             if (it.phaseNumber == 2) {
                 it.constraints.forEach { constraint ->

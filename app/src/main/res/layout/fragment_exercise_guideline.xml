@@ -1,120 +1,111 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:layout_marginTop="5dp"
     android:layout_marginBottom="30dp"
     android:paddingHorizontal="16dp"
+    android:orientation="vertical"
     tools:context=".ExerciseGuidelineFragment">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:gravity="center_vertical"
+        android:layout_marginBottom="16dp">
+
+        <ImageButton
+            android:id="@+id/back_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_back"
+            android:contentDescription="@string/back_button"
+            android:background="@android:color/transparent"
+            android:layout_marginEnd="8dp" />
+
+        <TextView
+            android:id="@+id/exercise_name_guideline"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/exercise_name_guideline"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="16dp">
-
-            <ImageButton
-                android:id="@+id/back_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@drawable/ic_back"
-                android:contentDescription="@string/back_button"
-                android:background="@android:color/transparent"
-                android:layout_marginEnd="8dp" />
+            android:orientation="vertical">
 
             <TextView
-                android:id="@+id/exercise_name_guideline"
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/exercise_name_guideline"
-                android:textSize="22sp"
+                android:layout_marginBottom="16dp"
+                android:text="@string/instructions"
+                android:textSize="20sp"
                 android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/exercise_instruction_guideline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:text="@string/instruction_details" />
 
             <Button
                 android:id="@+id/btn_start_workout_guideline"
-                android:layout_width="120dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/start_workout"
                 android:textSize="12sp"
                 android:layout_marginEnd="0dp"
                 android:paddingVertical="6dp" />
 
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:text="@string/exercise_images"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <androidx.viewpager2.widget.ViewPager2
+                android:id="@+id/image_slide_guideline"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+            <me.relex.circleindicator.CircleIndicator3
+                android:id="@+id/slide_indicator"
+                android:layout_width="match_parent"
+                android:layout_height="32dp"
+                android:background="@color/blue"
+                android:contentDescription="@string/indicator" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:text="@string/exercise_video"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <com.google.android.exoplayer2.ui.PlayerView
+                android:id="@+id/video_view"
+                android:layout_gravity="center"
+                android:layout_width="260dp"
+                android:layout_height="480dp"
+                android:layout_marginBottom="16dp" />
+
         </LinearLayout>
 
-        <ScrollView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    android:text="@string/instructions"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/exercise_instruction_guideline"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    android:text="@string/instruction_details" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    android:text="@string/exercise_video"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
-
-                <com.google.android.exoplayer2.ui.PlayerView
-                    android:id="@+id/video_view"
-                    android:layout_gravity="center"
-                    android:layout_width="260dp"
-                    android:layout_height="480dp"
-                    android:layout_marginBottom="16dp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    android:text="@string/exercise_images"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
-
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/exercise_guideline_image_list_container"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:layout_gravity="center"
-                    android:foregroundGravity="center"
-                    android:layout_marginBottom="16dp"
-                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
-
-                <androidx.viewpager2.widget.ViewPager2
-                    android:id="@+id/image_slide_guideline"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
-
-            </LinearLayout>
-
-
-        </ScrollView>
-
-    </LinearLayout>
+    </ScrollView>
 
 </LinearLayout>

@@ -1,9 +1,8 @@
-package org.mmh.virtual_assistant
+package org.mmh.virtual_assistant.ml
 
 import android.content.Context
 import android.graphics.*
 import android.os.SystemClock
-import android.util.Log
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.Interpreter
 import org.mmh.virtual_assistant.domain.model.*
@@ -84,7 +83,6 @@ class MoveNet(private val interpreter: Interpreter) : PoseDetector {
                 rect.top,
                 Paint()
             )
-            Log.d("output", "new : ${detectBitmap.width} - ${detectBitmap.height}")
             val inputTensor = processInputImage(detectBitmap, inputWidth, inputHeight)
             val outputTensor = TensorBuffer.createFixedSize(outputShape, DataType.FLOAT32)
             val widthRatio = detectBitmap.width.toFloat() / inputWidth
@@ -126,6 +124,30 @@ class MoveNet(private val interpreter: Interpreter) : PoseDetector {
                         points[index * 2 + 1]
                     )
             }
+            val leftShoulder = keyPoints[BodyPart.LEFT_SHOULDER.position]
+            val rightShoulder = keyPoints[BodyPart.RIGHT_SHOULDER.position]
+            val leftHip = keyPoints[BodyPart.LEFT_HIP.position]
+            val rightHip = keyPoints[BodyPart.RIGHT_HIP.position]
+            keyPoints.add(
+                KeyPoint(
+                    BodyPart.fromInt(17),
+                    PointF(
+                        (leftShoulder.coordinate.x + rightShoulder.coordinate.x) / 2f,
+                        (leftShoulder.coordinate.y + rightShoulder.coordinate.y) / 2f
+                    ),
+                    (leftShoulder.score + rightShoulder.score) / 2f
+                )
+            )
+            keyPoints.add(
+                KeyPoint(
+                    BodyPart.fromInt(18),
+                    PointF(
+                        (leftHip.coordinate.x + rightHip.coordinate.x) / 2f,
+                        (leftHip.coordinate.y + rightHip.coordinate.y) / 2f
+                    ),
+                    (leftHip.score + rightHip.score) / 2f
+                )
+            )
             // new crop region
             cropRegion = determineRectF(keyPoints, bitmap.width, bitmap.height)
         }

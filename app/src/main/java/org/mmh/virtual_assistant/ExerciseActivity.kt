@@ -2,14 +2,14 @@ package org.mmh.virtual_assistant
 
 import android.Manifest
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.graphics.*
 import android.hardware.camera2.*
 import android.media.ImageReader
-import android.net.Uri
-import android.os.*
+import android.os.Bundle
+import android.os.Handler
+import android.os.HandlerThread
+import android.os.Process
 import android.util.Log
 import android.util.Size
 import android.view.*
@@ -25,6 +25,8 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import org.mmh.virtual_assistant.api.IExerciseService
 import org.mmh.virtual_assistant.api.request.ExerciseTrackingPayload
+import org.mmh.virtual_assistant.api.request.PhaseSummary
+import org.mmh.virtual_assistant.api.request.QResponse
 import org.mmh.virtual_assistant.api.response.ExerciseTrackingResponse
 import org.mmh.virtual_assistant.core.Exercises
 import org.mmh.virtual_assistant.core.ImageUtils
@@ -32,7 +34,10 @@ import org.mmh.virtual_assistant.core.Utilities
 import org.mmh.virtual_assistant.core.VisualizationUtils
 import org.mmh.virtual_assistant.domain.model.Device
 import org.mmh.virtual_assistant.domain.model.LogInData
+import org.mmh.virtual_assistant.exercise.home.GeneralExercise
 import org.mmh.virtual_assistant.exercise.home.HomeExercise
+import org.mmh.virtual_assistant.ml.MoveNet
+import org.mmh.virtual_assistant.ml.PoseDetector
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -50,11 +55,10 @@ class ExerciseActivity : AppCompatActivity() {
         const val SetLimit = "SetLimit"
         const val ImageUrl = "ImageUrl"
         const val TAG = "ExerciseActivityTag"
-        private var PREVIEW_WIDTH = 640
-        private var PREVIEW_HEIGHT = 480
+        private const val PREVIEW_WIDTH = 640
+        private const val PREVIEW_HEIGHT = 480
     }
 
-    private val lock = Any()
     private lateinit var surfaceView: SurfaceView
     private lateinit var surfaceHolder: SurfaceHolder
     private var backgroundHandler: Handler? = null
@@ -89,6 +93,7 @@ class ExerciseActivity : AppCompatActivity() {
     private var testId: String? = ""
     private var exerciseId: Int = 0
     private var protocolId: Int = 0
+    private var qResponse = mutableListOf<QResponse>()
 
     private lateinit var countDisplay: TextView
     private lateinit var distanceDisplay: TextView
@@ -98,6 +103,9 @@ class ExerciseActivity : AppCompatActivity() {
     private lateinit var maxHoldTimeDisplay: TextView
     private lateinit var exerciseProgressBar: ProgressBar
     private lateinit var gifButton: ImageButton
+    private lateinit var pauseButton: Button
+    private lateinit var resumeButton: Button
+    private lateinit var pauseIndicator: ImageView
 
     private val stateCallback = object : CameraDevice.StateCallback() {
         override fun onOpened(camera: CameraDevice) {
@@ -152,7 +160,7 @@ class ExerciseActivity : AppCompatActivity() {
                 rotateMatrix.postRotate(90.0f)
             }
             val rotatedBitmap = Bitmap.createBitmap(
-                imageBitmap!!, 0, 0, PREVIEW_WIDTH, PREVIEW_HEIGHT,
+                imageBitmap!!, 0, 0, previewWidth, previewHeight,
                 rotateMatrix, true
             )
             image.close()
@@ -192,11 +200,6 @@ class ExerciseActivity : AppCompatActivity() {
 
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        val screenDimensions = getScreenSizeInlcudingTopBottomBar(this)
-
-//        PREVIEW_HEIGHT = screenDimensions[0]
-//        PREVIEW_WIDTH = screenDimensions[1]
-
         testId = intent.getStringExtra(TestId)
         exerciseId = intent.getIntExtra(ExerciseId, 122)
         protocolId = intent.getIntExtra(ProtocolId, 1)
@@ -206,7 +209,13 @@ class ExerciseActivity : AppCompatActivity() {
         val imageUrl = intent.getStringExtra(ImageUrl)
         logInData = loadLogInData()
 
-        exercise = Exercises.get(this, exerciseId)
+        val existingExercise = Exercises.get(this, exerciseId)
+        exercise = existingExercise
+            ?: GeneralExercise(
+                context = this,
+                exerciseId = exerciseId,
+                active = true
+            )
         exercise.initializeConstraint(logInData.tenant)
         exercise.setExercise(
             exerciseName = exerciseName ?: "",
@@ -226,6 +235,9 @@ class ExerciseActivity : AppCompatActivity() {
         maxHoldTimeDisplay = findViewById(R.id.max_hold_time_display)
         exerciseProgressBar = findViewById(R.id.exercise_progress)
         gifButton = findViewById(R.id.btn_gif_display)
+        pauseButton = findViewById(R.id.btn_pause)
+        resumeButton = findViewById(R.id.btn_resume)
+        pauseIndicator = findViewById(R.id.pause_indicator)
 
         exerciseProgressBar.max = exercise.maxSetCount * exercise.maxRepCount
 
@@ -245,18 +257,37 @@ class ExerciseActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.exercise_name).text = exerciseName
 
         findViewById<Button>(R.id.btn_done).setOnClickListener {
-            saveExerciseData(
-                ExerciseId = exerciseId,
-                TestId = testId!!,
-                ProtocolId = protocolId,
-                PatientId = logInData.patientId,
-                ExerciseDate = Utilities.currentDate(),
-                NoOfReps = exercise.getRepetitionCount(),
-                NoOfSets = exercise.getSetCount(),
-                NoOfWrongCount = exercise.getWrongCount(),
-                Tenant = logInData.tenant
-            )
+//            saveExerciseData(
+//                Tenant = logInData.tenant,
+//                PatientId = logInData.patientId,
+//                TestId = testId!!,
+//                ExerciseId = exerciseId,
+//                ProtocolId = protocolId,
+//                ExerciseDate = Utilities.currentDate(),
+//                NoOfReps = exercise.getRepetitionCount(),
+//                NoOfSets = exercise.getSetCount(),
+//                NoOfWrongCount = exercise.getWrongCount(),
+//                AssignSets = exercise.maxSetCount,
+//                AssignReps = exercise.maxRepCount,
+//                TotalTime = 0,
+//                Phases = exercise.getPhaseSummary(),
+//                Responses = listOf()
+//            )
             askQuestions(this)
+        }
+
+        pauseButton.setOnClickListener {
+            pauseButton.visibility = View.GONE
+            resumeButton.visibility = View.VISIBLE
+            pauseIndicator.visibility = View.VISIBLE
+            exercise.pauseExercise()
+        }
+
+        resumeButton.setOnClickListener {
+            resumeButton.visibility = View.GONE
+            pauseButton.visibility = View.VISIBLE
+            pauseIndicator.visibility = View.GONE
+            exercise.resumeExercise()
         }
 
         findViewById<ImageButton>(R.id.camera_switch_button).setOnClickListener {
@@ -287,34 +318,6 @@ class ExerciseActivity : AppCompatActivity() {
         requestPermission()
         closeCamera()
         openCamera()
-    }
-
-    ///  Get Screen width & height including top & bottom navigation bar
-    fun getScreenSizeInlcudingTopBottomBar(context: Context): IntArray {
-        val screenDimensions = IntArray(2) // width[0], height[1]
-        val x: Int
-        val y: Int
-        val orientation = context.resources.configuration.orientation
-        val wm = context.getSystemService(WINDOW_SERVICE) as WindowManager
-        val display = wm.defaultDisplay
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR2) {
-            val screenSize = Point()
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                display.getRealSize(screenSize)
-                x = screenSize.x
-                y = screenSize.y
-            } else {
-                display.getSize(screenSize)
-                x = screenSize.x
-                y = screenSize.y
-            }
-        } else {
-            x = display.width
-            y = display.height
-        }
-        screenDimensions[0] = if (orientation == Configuration.ORIENTATION_PORTRAIT) x else y // width
-        screenDimensions[1] = if (orientation == Configuration.ORIENTATION_PORTRAIT) y else x // height
-        return screenDimensions
     }
 
     override fun onStart() {
@@ -556,72 +559,67 @@ class ExerciseActivity : AppCompatActivity() {
                 congratsPatient(context = this@ExerciseActivity)
             }
         }
-        synchronized(lock) {
-            poseDetector?.estimateSinglePose(bitmap)?.let { person ->
-                score = person.score
-                if (score > minConfidence) {
-                    val height = bitmap.height
-                    val width = bitmap.width
-                    if (!showCongrats) {
-                        exercise.rightExerciseCount(person, height, width)
-                        exercise.wrongExerciseCount(person, height, width)
-                    }
-                    val phase = exercise.getPhase()
-                    MainScope().launch {
-                        countDisplay.text = getString(R.string.right_count_text).format(
-                            exercise.getRepetitionCount(),
-                            exercise.getSetCount()
-                        )
-                        exercise.getPersonDistance(person)?.let {
-                            distanceDisplay.text = getString(R.string.distance_text).format(it)
-                            if (it <= 5f) {
-                                phaseDialogueDisplay.textSize = 30f
-                            } else if (5f < it && it <= 10f) {
-                                phaseDialogueDisplay.textSize = 50f
-                            } else {
-                                phaseDialogueDisplay.textSize = 70f
-                            }
-                        }
 
-                        wrongCountDisplay.text =
-                            getString(R.string.wrong_text).format(exercise.getWrongCount())
-                        phase?.let {
-                            val timeToDisplay = exercise.getHoldTimeLimitCount()
-                            it.phaseDialogue?.let { dialogue ->
-                                if (dialogue.isNotEmpty()) {
-                                    phaseDialogueDisplay.visibility = View.VISIBLE
-                                    phaseDialogueDisplay.text =
-                                        getString(R.string.phase_dialogue).format(dialogue)
-                                } else {
-                                    phaseDialogueDisplay.visibility = View.GONE
-                                }
-                            }
-                            if (timeToDisplay > 0) {
-                                timeCountDisplay.visibility = View.VISIBLE
-                                timeCountDisplay.text =
-                                    getString(R.string.time_count_text).format(timeToDisplay)
-                            } else {
-                                timeCountDisplay.visibility = View.GONE
-                                timeCountDisplay.text =
-                                    getString(R.string.time_count_text).format(0)
-                            }
-                        }
-                        maxHoldTimeDisplay.text =
-                            getString(R.string.max_time_hold).format(exercise.getMaxHoldTime())
-                        exerciseProgressBar.progress =
-                            exercise.getSetCount() * exercise.maxRepCount + exercise.getRepetitionCount()
-                    }
-
-//                    outputBitmap = Bitmap.createScaledBitmap(
-//                        outputBitmap, 1080, 1080, false
-//                    )
-                    outputBitmap = VisualizationUtils.drawBodyKeyPoints(
-                        input = outputBitmap,
-                        person = person,
-                        phase = phase,
-                        isFrontCamera = isFrontCamera
-                    )
+        poseDetector?.estimateSinglePose(bitmap)?.let { person ->
+            score = person.score
+            if (score > minConfidence) {
+                val height = bitmap.height
+                val width = bitmap.width
+                if (!showCongrats) {
+                    exercise.rightExerciseCount(person, height, width)
+                    exercise.wrongExerciseCount(person, height, width)
                 }
+                val phase = exercise.getPhase()
+                MainScope().launch {
+                    countDisplay.text = getString(R.string.right_count_text).format(
+                        exercise.getRepetitionCount(),
+                        exercise.getSetCount()
+                    )
+                    exercise.getPersonDistance(person).let {
+                        distanceDisplay.text = getString(R.string.distance_text).format(it)
+                        if (it <= 5f) {
+                            phaseDialogueDisplay.textSize = 30f
+                        } else if (5f < it && it <= 10f) {
+                            phaseDialogueDisplay.textSize = 50f
+                        } else {
+                            phaseDialogueDisplay.textSize = 70f
+                        }
+                    }
+
+//                    wrongCountDisplay.text =
+//                        getString(R.string.wrong_text).format(exercise.getWrongCount())
+                    phase?.let {
+                        val timeToDisplay = exercise.getHoldTimeLimitCount()
+                        it.phaseDialogue?.let { dialogue ->
+                            if (dialogue.isNotEmpty()) {
+                                phaseDialogueDisplay.visibility = View.VISIBLE
+                                phaseDialogueDisplay.text =
+                                    getString(R.string.phase_dialogue).format(dialogue)
+                            } else {
+                                phaseDialogueDisplay.visibility = View.GONE
+                            }
+                        }
+                        if (timeToDisplay > 0) {
+                            timeCountDisplay.visibility = View.VISIBLE
+                            timeCountDisplay.text =
+                                getString(R.string.time_count_text).format(timeToDisplay)
+                        } else {
+                            timeCountDisplay.visibility = View.GONE
+                            timeCountDisplay.text = getString(R.string.time_count_text).format(0)
+                        }
+                    }
+                    maxHoldTimeDisplay.text =
+                        getString(R.string.max_time_hold).format(exercise.getMaxHoldTime())
+                    exerciseProgressBar.progress =
+                        exercise.getSetCount() * exercise.maxRepCount + exercise.getRepetitionCount()
+                }
+                outputBitmap = VisualizationUtils.drawBodyKeyPoints(
+                    input = bitmap,
+                    person = person,
+                    phase = phase,
+                    isFrontCamera = isFrontCamera,
+                    consideredIndices = exercise.consideredIndices.toList()
+                )
             }
         }
 
@@ -664,19 +662,6 @@ class ExerciseActivity : AppCompatActivity() {
     }
 
     private fun congratsPatient(context: Context) {
-        saveExerciseData(
-            ExerciseId = exerciseId,
-            TestId = testId!!,
-            ProtocolId = protocolId,
-            PatientId = logInData.patientId,
-            ExerciseDate = Utilities.currentDate(),
-            NoOfReps = exercise.getRepetitionCount(),
-            NoOfSets = exercise.getSetCount(),
-            NoOfWrongCount = exercise.getWrongCount(),
-            Tenant = logInData.tenant
-        )
-
-        Log.d("getExercise", "$ExerciseId, $testId, $protocolId")
         VisualizationUtils.getAlertDialogue(
             context = context,
             message = "Congratulations! You have successfully completed the exercise. Please be prepared for the next one.",
@@ -690,47 +675,165 @@ class ExerciseActivity : AppCompatActivity() {
     }
 
     private fun askQuestions(context: Context) {
-        val askForTracking = VisualizationUtils.getAlertDialogue(
+        val askForPain = VisualizationUtils.getAlertDialogue(
             context = context,
-            message = "Do you want to track your pain with EMMA?",
+            message = "Do you find this exercise to be too painful?",
             positiveButtonText = "Yes",
             positiveButtonAction = {
-                val intent = Intent(
-                    Intent.ACTION_VIEW,
-                    Uri.parse("https://emma.mypainlog.ai/#/new-screenings?patientid=${logInData.patientId}&type=refer&refertype=painlog&autologin=true")
+                qResponse.add(
+                    QResponse(
+                        QuestionId = 10001002,
+                        AnswerId = 61894,
+                        AnswerValue = "Yes"
+                    )
                 )
-                startActivity(intent)
+                saveExerciseData(
+                    Tenant = logInData.tenant,
+                    PatientId = logInData.patientId,
+                    TestId = testId!!,
+                    ExerciseId = exerciseId,
+                    ProtocolId = protocolId,
+                    ExerciseDate = Utilities.currentDate(),
+                    NoOfReps = exercise.getRepetitionCount(),
+                    NoOfSets = exercise.getSetCount(),
+                    NoOfWrongCount = exercise.getWrongCount(),
+                    AssignSets = exercise.maxSetCount,
+                    AssignReps = exercise.maxRepCount,
+                    TotalTime = 0,
+                    Phases = exercise.getPhaseSummary(),
+                    Responses = qResponse
+                )
                 finish()
             },
             negativeButtonText = "No",
             negativeButtonAction = {
+                qResponse.add(
+                    QResponse(
+                        QuestionId = 10001002,
+                        AnswerId = 61893,
+                        AnswerValue = "No"
+                    )
+                )
+                saveExerciseData(
+                    Tenant = logInData.tenant,
+                    PatientId = logInData.patientId,
+                    TestId = testId!!,
+                    ExerciseId = exerciseId,
+                    ProtocolId = protocolId,
+                    ExerciseDate = Utilities.currentDate(),
+                    NoOfReps = exercise.getRepetitionCount(),
+                    NoOfSets = exercise.getSetCount(),
+                    NoOfWrongCount = exercise.getWrongCount(),
+                    AssignSets = exercise.maxSetCount,
+                    AssignReps = exercise.maxRepCount,
+                    TotalTime = 0,
+                    Phases = exercise.getPhaseSummary(),
+                    Responses = qResponse
+                )
                 finish()
+            }
+        )
+        val askForEasiness = VisualizationUtils.getAlertDialogue(
+            context = context,
+            message = "Was this exercise too easy?",
+            positiveButtonText = "Yes",
+            positiveButtonAction = {
+                qResponse.add(
+                    QResponse(
+                        QuestionId = 10001001,
+                        AnswerId = 61892,
+                        AnswerValue = "Yes"
+                    )
+                )
+                saveExerciseData(
+                    Tenant = logInData.tenant,
+                    PatientId = logInData.patientId,
+                    TestId = testId!!,
+                    ExerciseId = exerciseId,
+                    ProtocolId = protocolId,
+                    ExerciseDate = Utilities.currentDate(),
+                    NoOfReps = exercise.getRepetitionCount(),
+                    NoOfSets = exercise.getSetCount(),
+                    NoOfWrongCount = exercise.getWrongCount(),
+                    AssignSets = exercise.maxSetCount,
+                    AssignReps = exercise.maxRepCount,
+                    TotalTime = 0,
+                    Phases = exercise.getPhaseSummary(),
+                    Responses = qResponse
+                )
+                finish()
+            },
+            negativeButtonText = "No",
+            negativeButtonAction = {
+                askForPain.show()
+                qResponse.add(
+                    QResponse(
+                        QuestionId = 10001001,
+                        AnswerId = 61891,
+                        AnswerValue = "No"
+                    )
+                )
             }
         )
         VisualizationUtils.getAlertDialogue(
             context = context,
-            message = "Do you feel any pain while performing this exercise?",
+            message = "Did you find this exercise to be too difficult?",
             positiveButtonText = "Yes",
             positiveButtonAction = {
-                askForTracking.show()
+                qResponse.add(
+                    QResponse(
+                        QuestionId = 10001000,
+                        AnswerId = 61890,
+                        AnswerValue = "Yes"
+                    )
+                )
+                saveExerciseData(
+                    Tenant = logInData.tenant,
+                    PatientId = logInData.patientId,
+                    TestId = testId!!,
+                    ExerciseId = exerciseId,
+                    ProtocolId = protocolId,
+                    ExerciseDate = Utilities.currentDate(),
+                    NoOfReps = exercise.getRepetitionCount(),
+                    NoOfSets = exercise.getSetCount(),
+                    NoOfWrongCount = exercise.getWrongCount(),
+                    AssignSets = exercise.maxSetCount,
+                    AssignReps = exercise.maxRepCount,
+                    TotalTime = 0,
+                    Phases = exercise.getPhaseSummary(),
+                    Responses = qResponse
+                )
+                finish()
             },
             negativeButtonText = "No",
             negativeButtonAction = {
-                finish()
+                askForEasiness.show()
+                qResponse.add(
+                    QResponse(
+                        QuestionId = 10001000,
+                        AnswerId = 61889,
+                        AnswerValue = "No"
+                    )
+                )
             }
         ).show()
     }
 
     private fun saveExerciseData(
-        ExerciseId: Int,
-        TestId: String,
-        ProtocolId: Int,
+        Tenant: String,
         PatientId: String,
+        TestId: String,
+        ExerciseId: Int,
+        ProtocolId: Int,
         ExerciseDate: String,
+        AssignSets: Int = 0,
+        AssignReps: Int = 0,
         NoOfReps: Int,
         NoOfSets: Int,
         NoOfWrongCount: Int,
-        Tenant: String
+        TotalTime: Int = 0,
+        Phases: List<PhaseSummary>,
+        Responses: List<QResponse>
     ) {
         val logInData = loadLogInData()
         saveExerciseTrackingURL = Utilities.getUrl(logInData.tenant).saveExerciseTrackingURL
@@ -742,15 +845,27 @@ class ExerciseActivity : AppCompatActivity() {
             .create(IExerciseService::class.java)
 
         val requestPayload = ExerciseTrackingPayload(
-            ExerciseId = ExerciseId,
-            TestId = TestId,
-            ProtocolId = ProtocolId,
+            Tenant = Tenant,
             PatientId = PatientId,
+            TestId = TestId,
+            ExerciseId = ExerciseId,
+            ProtocolId = ProtocolId,
+            AssignSets = AssignSets,
+            AssignReps = AssignReps,
             ExerciseDate = ExerciseDate,
             NoOfReps = NoOfReps,
             NoOfSets = NoOfSets,
             NoOfWrongCount = NoOfWrongCount,
-            Tenant = Tenant
+            TotalTime = TotalTime,
+            Phases = Phases,
+            Responses = Responses
+        )
+        Log.d(
+            "setCount",
+            "\n \n Tenant = $Tenant \n PatientId = $PatientId \n TestId = $TestId \n ExerciseId = $ExerciseId \n " +
+                    "ProtocolId = $ProtocolId \n AssignSets = $AssignSets \n AssignReps = $AssignReps \n ExerciseDate = $ExerciseDate \n" +
+                    "NoOfReps = $NoOfReps \nNoOfSets = $NoOfSets \n NoOfWrongCount = $NoOfWrongCount \n TotalTime = $TotalTime \n " +
+                    "Phases = $Phases \n,Responses = $Responses"
         )
         val response = service.saveExerciseData(requestPayload)
         response.enqueue(object : Callback<ExerciseTrackingResponse> {

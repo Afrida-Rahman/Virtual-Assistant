@@ -7,6 +7,7 @@ import retrofit2.http.Body
 import retrofit2.http.POST
 
 interface ILogInService {
+
     @POST("/api/Account/GetCrmContact")
     fun logIn(@Body requestPayload: LogInRequest): Call<LogInResponse>
 }

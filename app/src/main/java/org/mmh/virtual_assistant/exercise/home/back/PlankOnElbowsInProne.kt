@@ -3,4 +3,4 @@ package org.mmh.virtual_assistant.exercise.home.back
 import android.content.Context
 import org.mmh.virtual_assistant.exercise.home.HomeExercise
 
-class PlankOnElbowsInProne(context: Context) : HomeExercise(context = context, id = 352) {}
+class PlankOnElbowsInProne(context: Context) : HomeExercise(context = context, id = 352)

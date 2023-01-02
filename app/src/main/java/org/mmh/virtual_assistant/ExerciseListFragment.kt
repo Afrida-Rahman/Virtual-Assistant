@@ -44,6 +44,7 @@ class ExerciseListFragment(
                         exerciseList = exerciseList.filter {
                             it.name.lowercase().contains(searchQuery.lowercase())
                         },
+                        fullExerciseList = exerciseList,
                         manager = parentFragmentManager,
                         patientId = patientId,
                         tenant = tenant
@@ -62,6 +63,7 @@ class ExerciseListFragment(
                         exerciseList = exerciseList.filter {
                             it.name.lowercase().contains(searchQuery.lowercase())
                         },
+                        fullExerciseList = exerciseList,
                         manager = parentFragmentManager,
                         patientId = patientId,
                         tenant = tenant
@@ -77,6 +79,7 @@ class ExerciseListFragment(
                 assessmentId,
                 assessmentDate,
                 exerciseList,
+                exerciseList,
                 parentFragmentManager,
                 patientId = patientId,
                 tenant = tenant
@@ -89,10 +92,25 @@ class ExerciseListFragment(
             assessmentId,
             assessmentDate,
             exerciseList,
+            exerciseList,
             parentFragmentManager,
             patientId = patientId,
             tenant = tenant
         )
         return view
+    }
+
+    override fun onResume() {
+        super.onResume()
+        adapter.adapter = ExerciseListAdapter(
+            assessmentId,
+            assessmentDate,
+            exerciseList,
+            exerciseList,
+            parentFragmentManager,
+            patientId = patientId,
+            tenant = tenant
+        )
+        adapter.adapter?.notifyDataSetChanged()
     }
 }
