@@ -131,7 +131,7 @@ object ImageUtils {
             stream.close()
             return bmp
         } catch (e: Exception) {
-            Log.e(TAG, "Error: " + e.message)
+            //Log.e(TAG, "Error: " + e.message)
         }
         return null
     }

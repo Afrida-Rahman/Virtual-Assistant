@@ -494,7 +494,7 @@ abstract class HomeExercise(
 
     fun setNewConstraints() {
         trackIndex = 0
-        Log.d("setCount", "right count phases: $rightCountPhases \n \n ")
+        //Log.d("setCount", "right count phases: $rightCountPhases \n \n ")
         rightCountPhases.forEach { phase ->
             phase.constraints.forEach { constraint ->
                 val standardValues = constraint.getStandardConstraints()
@@ -503,7 +503,7 @@ abstract class HomeExercise(
                 val refinedConstraintGap = minMaxMedian.max - minMaxMedian.max
 
                 if (minMaxMedian.median < standardValues.standardMin || minMaxMedian.median > standardValues.standardMax) {
-                    Log.d("setCount", "Out of the standard constraints!")
+                    //Log.d("setCount", "Out of the standard constraints!")
                     if (refinedConstraintGap > standardConstraintGap) {
                         val newMin = minMaxMedian.median - (standardConstraintGap / 2)
                         val newMax = minMaxMedian.median + (standardConstraintGap / 2)
@@ -522,22 +522,22 @@ abstract class HomeExercise(
                     }
 
                 } else {
-                    Log.d("setCount", "Satisfies the standard constraints!")
+                    //Log.d("setCount", "Satisfies the standard constraints!")
                     constraint.setStandardConstraints()
                 }
                 constraint.storedValues.clear()
 
-                Log.d("setCount", "phase:: ${phase.phaseNumber}")
-                Log.d("setCount", "median:: ${minMaxMedian.median}")
-                Log.d(
-                    "setCount",
-                    "Phase Details:: ${getIndexName(constraint.startPointIndex)}, " +
-                            getIndexName(constraint.middlePointIndex) + " ," +
-                            getIndexName(constraint.endPointIndex)
-                )
+                //Log.d("setCount", "phase:: ${phase.phaseNumber}")
+                //Log.d("setCount", "median:: ${minMaxMedian.median}")
+                //Log.d(
+                //    "setCount",
+                //    "Phase Details:: ${getIndexName(constraint.startPointIndex)}, " +
+                //            getIndexName(constraint.middlePointIndex) + " ," +
+                //            getIndexName(constraint.endPointIndex)
+                //)
 
-                Log.d("setCount", "new minValue:: ${constraint.minValue}")
-                Log.d("setCount", "new maxValue:: ${constraint.maxValue}")
+                //Log.d("setCount", "new minValue:: ${constraint.minValue}")
+                //Log.d("setCount", "new maxValue:: ${constraint.maxValue}")
 
                 restriction.add(
                     Restriction(
@@ -559,7 +559,7 @@ abstract class HomeExercise(
 
 
 
-                Log.d("setCount", "Output:: ${phaseSummary}")
+                //Log.d("setCount", "Output:: ${phaseSummary}")
             }
 
         }

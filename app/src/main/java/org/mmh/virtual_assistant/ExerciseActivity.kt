@@ -3,13 +3,12 @@ package org.mmh.virtual_assistant
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.graphics.*
+import android.graphics.Point
 import android.hardware.camera2.*
 import android.media.ImageReader
-import android.os.Bundle
-import android.os.Handler
-import android.os.HandlerThread
-import android.os.Process
+import android.os.*
 import android.util.Log
 import android.util.Size
 import android.view.*
@@ -28,10 +27,9 @@ import org.mmh.virtual_assistant.api.request.ExerciseTrackingPayload
 import org.mmh.virtual_assistant.api.request.PhaseSummary
 import org.mmh.virtual_assistant.api.request.QResponse
 import org.mmh.virtual_assistant.api.response.ExerciseTrackingResponse
-import org.mmh.virtual_assistant.core.Exercises
-import org.mmh.virtual_assistant.core.ImageUtils
-import org.mmh.virtual_assistant.core.Utilities
-import org.mmh.virtual_assistant.core.VisualizationUtils
+import org.mmh.virtual_assistant.core.*
+import org.mmh.virtual_assistant.core.Utilities.isPointInsideRectangle
+import org.mmh.virtual_assistant.domain.model.BodyPart
 import org.mmh.virtual_assistant.domain.model.Device
 import org.mmh.virtual_assistant.domain.model.LogInData
 import org.mmh.virtual_assistant.exercise.home.GeneralExercise
@@ -45,6 +43,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 
+@Suppress("DEPRECATION")
 class ExerciseActivity : AppCompatActivity() {
     companion object {
         const val ExerciseId = "ExerciseId"
@@ -59,6 +58,8 @@ class ExerciseActivity : AppCompatActivity() {
         private const val PREVIEW_HEIGHT = 480
     }
 
+    private val lock = Any()
+    private var enableAskQues = false
     private lateinit var surfaceView: SurfaceView
     private lateinit var surfaceHolder: SurfaceHolder
     private var backgroundHandler: Handler? = null
@@ -106,6 +107,9 @@ class ExerciseActivity : AppCompatActivity() {
     private lateinit var pauseButton: Button
     private lateinit var resumeButton: Button
     private lateinit var pauseIndicator: ImageView
+    private lateinit var question: VisualQues
+    private var quesAnsweredAt = System.currentTimeMillis()
+    private var quesDelay = 3000L
 
     private val stateCallback = object : CameraDevice.StateCallback() {
         override fun onOpened(camera: CameraDevice) {
@@ -123,22 +127,19 @@ class ExerciseActivity : AppCompatActivity() {
         }
     }
 
-    private val requestPermissionLauncher =
-        registerForActivityResult(
-            ActivityResultContracts.RequestPermission()
-        ) { isGranted: Boolean ->
-            if (isGranted) {
-                // Permission is granted. Continue the action or workflow in your
-                // app.
-                openCamera()
-            } else {
-                Toast.makeText(
-                    this,
-                    "Camera permission is required to use this feature!",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            // Permission is granted. Continue the action or workflow in your
+            // app.
+            openCamera()
+        } else {
+            Toast.makeText(
+                this, "Camera permission is required to use this feature!", Toast.LENGTH_LONG
+            ).show()
         }
+    }
 
     private var imageAvailableListener = object : ImageReader.OnImageAvailableListener {
         override fun onImageAvailable(imageReader: ImageReader) {
@@ -160,8 +161,7 @@ class ExerciseActivity : AppCompatActivity() {
                 rotateMatrix.postRotate(90.0f)
             }
             val rotatedBitmap = Bitmap.createBitmap(
-                imageBitmap!!, 0, 0, previewWidth, previewHeight,
-                rotateMatrix, true
+                imageBitmap!!, 0, 0, previewWidth, previewHeight, rotateMatrix, true
             )
             image.close()
 
@@ -175,10 +175,7 @@ class ExerciseActivity : AppCompatActivity() {
         }
 
         override fun onItemSelected(
-            parent: AdapterView<*>?,
-            view: View?,
-            position: Int,
-            id: Long
+            parent: AdapterView<*>?, view: View?, position: Int, id: Long
         ) {
             changeModel(position)
         }
@@ -200,6 +197,11 @@ class ExerciseActivity : AppCompatActivity() {
 
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
+//        val screenDimensions = getScreenSizeInlcudingTopBottomBar(this)
+
+//        PREVIEW_HEIGHT = screenDimensions[0]
+//        PREVIEW_WIDTH = screenDimensions[1]
+
         testId = intent.getStringExtra(TestId)
         exerciseId = intent.getIntExtra(ExerciseId, 122)
         protocolId = intent.getIntExtra(ProtocolId, 1)
@@ -210,12 +212,9 @@ class ExerciseActivity : AppCompatActivity() {
         logInData = loadLogInData()
 
         val existingExercise = Exercises.get(this, exerciseId)
-        exercise = existingExercise
-            ?: GeneralExercise(
-                context = this,
-                exerciseId = exerciseId,
-                active = true
-            )
+        exercise = existingExercise ?: GeneralExercise(
+            context = this, exerciseId = exerciseId, active = true
+        )
         exercise.initializeConstraint(logInData.tenant)
         exercise.setExercise(
             exerciseName = exerciseName ?: "",
@@ -241,16 +240,13 @@ class ExerciseActivity : AppCompatActivity() {
 
         exerciseProgressBar.max = exercise.maxSetCount * exercise.maxRepCount
 
-        maxHoldTimeDisplay.text =
-            getString(R.string.max_time_hold).format(0)
+        maxHoldTimeDisplay.text = getString(R.string.max_time_hold).format(0)
 
         countDisplay.text = getString(R.string.right_count_text).format(
-            exercise.getRepetitionCount(),
-            exercise.getSetCount()
+            exercise.getRepetitionCount(), exercise.getSetCount()
         )
         distanceDisplay.text = getString(R.string.distance_text).format(0f)
-        wrongCountDisplay.text =
-            getString(R.string.wrong_text).format(0)
+        wrongCountDisplay.text = getString(R.string.wrong_text).format(0)
 
         phaseDialogueDisplay.visibility = View.GONE
 
@@ -273,7 +269,8 @@ class ExerciseActivity : AppCompatActivity() {
 //                Phases = exercise.getPhaseSummary(),
 //                Responses = listOf()
 //            )
-            askQuestions(this)
+//            askQuestions(this)
+            askVizQuestions(10001000)
         }
 
         pauseButton.setOnClickListener {
@@ -318,6 +315,35 @@ class ExerciseActivity : AppCompatActivity() {
         requestPermission()
         closeCamera()
         openCamera()
+    }
+
+    fun getScreenSizeInlcudingTopBottomBar(context: Context): IntArray {
+        val screenDimensions = IntArray(2) // width[0], height[1]
+        val x: Int
+        val y: Int
+        val orientation = context.resources.configuration.orientation
+        val wm = context.getSystemService(WINDOW_SERVICE) as WindowManager
+        val display = wm.defaultDisplay
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR2) {
+            val screenSize = Point()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                display.getRealSize(screenSize)
+                x = screenSize.x
+                y = screenSize.y
+            } else {
+                display.getSize(screenSize)
+                x = screenSize.x
+                y = screenSize.y
+            }
+        } else {
+            x = display.width
+            y = display.height
+        }
+        screenDimensions[0] =
+            if (orientation == Configuration.ORIENTATION_PORTRAIT) x else y // width
+        screenDimensions[1] =
+            if (orientation == Configuration.ORIENTATION_PORTRAIT) y else x // height
+        return screenDimensions
     }
 
     override fun onStart() {
@@ -368,9 +394,7 @@ class ExerciseActivity : AppCompatActivity() {
 
     private fun initSpinner() {
         ArrayAdapter.createFromResource(
-            this,
-            R.array.tfe_pe_models_array,
-            android.R.layout.simple_spinner_item
+            this, R.array.tfe_pe_models_array, android.R.layout.simple_spinner_item
         ).also { adapter ->
             // Specify the layout to use when the list of choices appears
             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -380,8 +404,7 @@ class ExerciseActivity : AppCompatActivity() {
         }
 
         ArrayAdapter.createFromResource(
-            this,
-            R.array.tfe_pe_device_name, android.R.layout.simple_spinner_item
+            this, R.array.tfe_pe_device_name, android.R.layout.simple_spinner_item
         ).also { adapter ->
             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
 
@@ -393,8 +416,7 @@ class ExerciseActivity : AppCompatActivity() {
     private fun requestPermission() {
         when (PackageManager.PERMISSION_GRANTED) {
             ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.CAMERA
+                this, Manifest.permission.CAMERA
             ) -> {
                 // You can use the API that requires the permission.
                 openCamera()
@@ -412,9 +434,7 @@ class ExerciseActivity : AppCompatActivity() {
     private fun openCamera() {
         // check if permission is granted or not.
         if (checkPermission(
-                Manifest.permission.CAMERA,
-                Process.myPid(),
-                Process.myUid()
+                Manifest.permission.CAMERA, Process.myPid(), Process.myUid()
             ) == PackageManager.PERMISSION_GRANTED
         ) {
             setUpCameraOutputs()
@@ -454,8 +474,7 @@ class ExerciseActivity : AppCompatActivity() {
                 previewSize = Size(PREVIEW_WIDTH, PREVIEW_HEIGHT)
 
                 imageReader = ImageReader.newInstance(
-                    PREVIEW_WIDTH, PREVIEW_HEIGHT,
-                    ImageFormat.YUV_420_888, /*maxImages*/ 2
+                    PREVIEW_WIDTH, PREVIEW_HEIGHT, ImageFormat.YUV_420_888, /*maxImages*/ 2
                 )
 
                 previewHeight = previewSize!!.height
@@ -509,8 +528,7 @@ class ExerciseActivity : AppCompatActivity() {
 
             // Here, we create a CameraCaptureSession for camera preview.
             cameraDevice!!.createCaptureSession(
-                listOf(recordingSurface),
-                object : CameraCaptureSession.StateCallback() {
+                listOf(recordingSurface), object : CameraCaptureSession.StateCallback() {
                     override fun onConfigured(cameraCaptureSession: CameraCaptureSession) {
                         // The camera is already closed
                         if (cameraDevice == null) return
@@ -526,22 +544,20 @@ class ExerciseActivity : AppCompatActivity() {
                             // Finally, we start displaying the camera preview.
                             previewRequest = previewRequestBuilder!!.build()
                             captureSession!!.setRepeatingRequest(
-                                previewRequest!!,
-                                null, null
+                                previewRequest!!, null, null
                             )
                         } catch (e: CameraAccessException) {
-                            Log.e(TAG, e.toString())
+                            //Log.e(TAG, e.toString())
                         }
                     }
 
                     override fun onConfigureFailed(cameraCaptureSession: CameraCaptureSession) {
 //                        Toast.makeText(this@ExerciseActivity, "Failed", Toast.LENGTH_SHORT).show()
                     }
-                },
-                null
+                }, null
             )
         } catch (e: CameraAccessException) {
-            Log.e(TAG, "Error creating camera preview session.", e)
+            //Log.e(TAG, "Error creating camera preview session.", e)
         }
     }
 
@@ -552,6 +568,8 @@ class ExerciseActivity : AppCompatActivity() {
     private fun processImage(bitmap: Bitmap) {
         var score = 0f
         var outputBitmap = bitmap
+        var cordRightWrist: PointF? = null
+        var vizOutput: VisualOutput? = null
 
         if ((exercise.getSetCount() >= exercise.maxSetCount) && !showCongrats) {
             showCongrats = true
@@ -559,67 +577,99 @@ class ExerciseActivity : AppCompatActivity() {
                 congratsPatient(context = this@ExerciseActivity)
             }
         }
-
-        poseDetector?.estimateSinglePose(bitmap)?.let { person ->
-            score = person.score
-            if (score > minConfidence) {
-                val height = bitmap.height
-                val width = bitmap.width
-                if (!showCongrats) {
-                    exercise.rightExerciseCount(person, height, width)
-                    exercise.wrongExerciseCount(person, height, width)
-                }
-                val phase = exercise.getPhase()
-                MainScope().launch {
-                    countDisplay.text = getString(R.string.right_count_text).format(
-                        exercise.getRepetitionCount(),
-                        exercise.getSetCount()
-                    )
-                    exercise.getPersonDistance(person).let {
-                        distanceDisplay.text = getString(R.string.distance_text).format(it)
-                        if (it <= 5f) {
-                            phaseDialogueDisplay.textSize = 30f
-                        } else if (5f < it && it <= 10f) {
-                            phaseDialogueDisplay.textSize = 50f
-                        } else {
-                            phaseDialogueDisplay.textSize = 70f
-                        }
+        synchronized(lock) {
+            poseDetector?.estimateSinglePose(bitmap)?.let { person ->
+                score = person.score
+                if (score > minConfidence) {
+                    val height = bitmap.height
+                    val width = bitmap.width
+                    if (!showCongrats && !enableAskQues) {
+                        exercise.rightExerciseCount(person, height, width)
+                        exercise.wrongExerciseCount(person, height, width)
                     }
+                    val phase = exercise.getPhase()
+                    MainScope().launch {
+                        if (enableAskQues) {
+                            findViewById<Button>(R.id.btn_done).visibility = View.GONE
+                            exercise.getPersonDistance(person).let {
+                                distanceDisplay.text = getString(R.string.distance_text).format(it)
+                                if (it <= 5f) {
+                                    phaseDialogueDisplay.textSize = 30f
+                                } else if (5f < it && it <= 10f) {
+                                    phaseDialogueDisplay.textSize = 50f
+                                } else {
+                                    phaseDialogueDisplay.textSize = 70f
+                                }
+                            }
+                            phaseDialogueDisplay.visibility = View.VISIBLE
+                            phaseDialogueDisplay.text = question.questionMessage
+                        } else {
+                            countDisplay.text = getString(R.string.right_count_text).format(
+                                exercise.getRepetitionCount(), exercise.getSetCount()
+                            )
+                            exercise.getPersonDistance(person).let {
+                                distanceDisplay.text = getString(R.string.distance_text).format(it)
+                                if (it <= 5f) {
+                                    phaseDialogueDisplay.textSize = 30f
+                                } else if (5f < it && it <= 10f) {
+                                    phaseDialogueDisplay.textSize = 50f
+                                } else {
+                                    phaseDialogueDisplay.textSize = 70f
+                                }
+                            }
 
 //                    wrongCountDisplay.text =
 //                        getString(R.string.wrong_text).format(exercise.getWrongCount())
-                    phase?.let {
-                        val timeToDisplay = exercise.getHoldTimeLimitCount()
-                        it.phaseDialogue?.let { dialogue ->
-                            if (dialogue.isNotEmpty()) {
-                                phaseDialogueDisplay.visibility = View.VISIBLE
-                                phaseDialogueDisplay.text =
-                                    getString(R.string.phase_dialogue).format(dialogue)
-                            } else {
-                                phaseDialogueDisplay.visibility = View.GONE
+                            phase?.let {
+                                val timeToDisplay = exercise.getHoldTimeLimitCount()
+                                it.phaseDialogue?.let { dialogue ->
+                                    if (dialogue.isNotEmpty()) {
+                                        phaseDialogueDisplay.visibility = View.VISIBLE
+                                        phaseDialogueDisplay.text =
+                                            getString(R.string.phase_dialogue).format(dialogue)
+                                    } else {
+                                        phaseDialogueDisplay.visibility = View.GONE
+                                    }
+                                }
+                                if (timeToDisplay > 0) {
+                                    timeCountDisplay.visibility = View.VISIBLE
+                                    timeCountDisplay.text =
+                                        getString(R.string.time_count_text).format(timeToDisplay)
+                                } else {
+                                    timeCountDisplay.visibility = View.GONE
+                                    timeCountDisplay.text =
+                                        getString(R.string.time_count_text).format(0)
+                                }
                             }
-                        }
-                        if (timeToDisplay > 0) {
-                            timeCountDisplay.visibility = View.VISIBLE
-                            timeCountDisplay.text =
-                                getString(R.string.time_count_text).format(timeToDisplay)
-                        } else {
-                            timeCountDisplay.visibility = View.GONE
-                            timeCountDisplay.text = getString(R.string.time_count_text).format(0)
+                            maxHoldTimeDisplay.text =
+                                getString(R.string.max_time_hold).format(exercise.getMaxHoldTime())
+                            exerciseProgressBar.progress =
+                                exercise.getSetCount() * exercise.maxRepCount + exercise.getRepetitionCount()
                         }
                     }
-                    maxHoldTimeDisplay.text =
-                        getString(R.string.max_time_hold).format(exercise.getMaxHoldTime())
-                    exerciseProgressBar.progress =
-                        exercise.getSetCount() * exercise.maxRepCount + exercise.getRepetitionCount()
+
+                    if (enableAskQues) {
+                        for (keyPoint in person.keyPoints) {
+                            if (keyPoint.bodyPart == BodyPart.RIGHT_WRIST && keyPoint.score > minConfidence) {
+                                cordRightWrist = keyPoint.coordinate
+                            }
+                        }
+                    }
+
+                    var drawButton = false
+                    if (System.currentTimeMillis() - quesAnsweredAt > quesDelay && enableAskQues) {
+                        drawButton = true
+                    }
+                    vizOutput = VisualizationUtils.drawBodyKeyPoints(
+                        input = outputBitmap,
+                        person = person,
+                        phase = phase,
+                        isFrontCamera = isFrontCamera,
+                        consideredIndices = exercise.consideredIndices.toList(),
+                        enableAskQues = drawButton
+                    )
+                    outputBitmap = vizOutput!!.bitmap
                 }
-                outputBitmap = VisualizationUtils.drawBodyKeyPoints(
-                    input = bitmap,
-                    person = person,
-                    phase = phase,
-                    isFrontCamera = isFrontCamera,
-                    consideredIndices = exercise.consideredIndices.toList()
-                )
             }
         }
 
@@ -650,41 +700,45 @@ class ExerciseActivity : AppCompatActivity() {
         val bottom: Int = top + screenHeight
 
         canvas.drawBitmap(
-            outputBitmap, Rect(0, 0, outputBitmap.width, outputBitmap.height),
-            Rect(left, top, right, bottom), Paint()
+            outputBitmap,
+            Rect(0, 0, outputBitmap.width, outputBitmap.height),
+            Rect(left, top, right, bottom),
+            Paint()
         )
         surfaceHolder.unlockCanvasAndPost(canvas)
+
+        // Process visual answer
+        if (enableAskQues && cordRightWrist != null) {
+            if (System.currentTimeMillis() - quesAnsweredAt > quesDelay) {
+                extractVisualAnswer(vizOutput!!.noRectF, vizOutput!!.yesRectF, cordRightWrist!!)
+            }
+        }
+
         tvScore.text = getString(R.string.tfe_pe_tv_score).format(score)
         poseDetector?.lastInferenceTimeNanos()?.let {
-            tvTime.text =
-                getString(R.string.tfe_pe_tv_time).format(it * 1.0f / 1_000_000)
+            tvTime.text = getString(R.string.tfe_pe_tv_time).format(it * 1.0f / 1_000_000)
         }
     }
 
     private fun congratsPatient(context: Context) {
-        VisualizationUtils.getAlertDialogue(
-            context = context,
+        VisualizationUtils.getAlertDialogue(context = context,
             message = "Congratulations! You have successfully completed the exercise. Please be prepared for the next one.",
             positiveButtonText = "Ok",
             positiveButtonAction = {
                 askQuestions(context)
             },
             negativeButtonText = null,
-            negativeButtonAction = {}
-        ).show()
+            negativeButtonAction = {}).show()
     }
 
     private fun askQuestions(context: Context) {
-        val askForPain = VisualizationUtils.getAlertDialogue(
-            context = context,
+        val askForPain = VisualizationUtils.getAlertDialogue(context = context,
             message = "Do you find this exercise to be too painful?",
             positiveButtonText = "Yes",
             positiveButtonAction = {
                 qResponse.add(
                     QResponse(
-                        QuestionId = 10001002,
-                        AnswerId = 61894,
-                        AnswerValue = "Yes"
+                        QuestionId = 10001002, AnswerId = 61894, AnswerValue = "Yes"
                     )
                 )
                 saveExerciseData(
@@ -709,9 +763,7 @@ class ExerciseActivity : AppCompatActivity() {
             negativeButtonAction = {
                 qResponse.add(
                     QResponse(
-                        QuestionId = 10001002,
-                        AnswerId = 61893,
-                        AnswerValue = "No"
+                        QuestionId = 10001002, AnswerId = 61893, AnswerValue = "No"
                     )
                 )
                 saveExerciseData(
@@ -731,18 +783,14 @@ class ExerciseActivity : AppCompatActivity() {
                     Responses = qResponse
                 )
                 finish()
-            }
-        )
-        val askForEasiness = VisualizationUtils.getAlertDialogue(
-            context = context,
+            })
+        val askForEasiness = VisualizationUtils.getAlertDialogue(context = context,
             message = "Was this exercise too easy?",
             positiveButtonText = "Yes",
             positiveButtonAction = {
                 qResponse.add(
                     QResponse(
-                        QuestionId = 10001001,
-                        AnswerId = 61892,
-                        AnswerValue = "Yes"
+                        QuestionId = 10001001, AnswerId = 61892, AnswerValue = "Yes"
                     )
                 )
                 saveExerciseData(
@@ -768,23 +816,17 @@ class ExerciseActivity : AppCompatActivity() {
                 askForPain.show()
                 qResponse.add(
                     QResponse(
-                        QuestionId = 10001001,
-                        AnswerId = 61891,
-                        AnswerValue = "No"
+                        QuestionId = 10001001, AnswerId = 61891, AnswerValue = "No"
                     )
                 )
-            }
-        )
-        VisualizationUtils.getAlertDialogue(
-            context = context,
+            })
+        VisualizationUtils.getAlertDialogue(context = context,
             message = "Did you find this exercise to be too difficult?",
             positiveButtonText = "Yes",
             positiveButtonAction = {
                 qResponse.add(
                     QResponse(
-                        QuestionId = 10001000,
-                        AnswerId = 61890,
-                        AnswerValue = "Yes"
+                        QuestionId = 10001000, AnswerId = 61890, AnswerValue = "Yes"
                     )
                 )
                 saveExerciseData(
@@ -810,13 +852,10 @@ class ExerciseActivity : AppCompatActivity() {
                 askForEasiness.show()
                 qResponse.add(
                     QResponse(
-                        QuestionId = 10001000,
-                        AnswerId = 61889,
-                        AnswerValue = "No"
+                        QuestionId = 10001000, AnswerId = 61889, AnswerValue = "No"
                     )
                 )
-            }
-        ).show()
+            }).show()
     }
 
     private fun saveExerciseData(
@@ -838,11 +877,8 @@ class ExerciseActivity : AppCompatActivity() {
         val logInData = loadLogInData()
         saveExerciseTrackingURL = Utilities.getUrl(logInData.tenant).saveExerciseTrackingURL
 
-        val service = Retrofit.Builder()
-            .addConverterFactory(GsonConverterFactory.create())
-            .baseUrl(saveExerciseTrackingURL)
-            .build()
-            .create(IExerciseService::class.java)
+        val service = Retrofit.Builder().addConverterFactory(GsonConverterFactory.create())
+            .baseUrl(saveExerciseTrackingURL).build().create(IExerciseService::class.java)
 
         val requestPayload = ExerciseTrackingPayload(
             Tenant = Tenant,
@@ -860,26 +896,20 @@ class ExerciseActivity : AppCompatActivity() {
             Phases = Phases,
             Responses = Responses
         )
-        Log.d(
-            "setCount",
-            "\n \n Tenant = $Tenant \n PatientId = $PatientId \n TestId = $TestId \n ExerciseId = $ExerciseId \n " +
-                    "ProtocolId = $ProtocolId \n AssignSets = $AssignSets \n AssignReps = $AssignReps \n ExerciseDate = $ExerciseDate \n" +
-                    "NoOfReps = $NoOfReps \nNoOfSets = $NoOfSets \n NoOfWrongCount = $NoOfWrongCount \n TotalTime = $TotalTime \n " +
-                    "Phases = $Phases \n,Responses = $Responses"
-        )
+//        Log.d(
+//            "setCount",
+//            "\n \n Tenant = $Tenant \n PatientId = $PatientId \n TestId = $TestId \n ExerciseId = $ExerciseId \n " + "ProtocolId = $ProtocolId \n AssignSets = $AssignSets \n AssignReps = $AssignReps \n ExerciseDate = $ExerciseDate \n" + "NoOfReps = $NoOfReps \nNoOfSets = $NoOfSets \n NoOfWrongCount = $NoOfWrongCount \n TotalTime = $TotalTime \n " + "Phases = $Phases \n,Responses = $Responses"
+//        )
         val response = service.saveExerciseData(requestPayload)
         response.enqueue(object : Callback<ExerciseTrackingResponse> {
             override fun onResponse(
-                call: Call<ExerciseTrackingResponse>,
-                response: Response<ExerciseTrackingResponse>
+                call: Call<ExerciseTrackingResponse>, response: Response<ExerciseTrackingResponse>
             ) {
                 val responseBody = response.body()
                 if (responseBody != null) {
                     if (responseBody.Successful) {
                         Toast.makeText(
-                            this@ExerciseActivity,
-                            responseBody.Message,
-                            Toast.LENGTH_LONG
+                            this@ExerciseActivity, responseBody.Message, Toast.LENGTH_LONG
                         ).show()
                     } else {
                         Toast.makeText(
@@ -899,9 +929,7 @@ class ExerciseActivity : AppCompatActivity() {
 
             override fun onFailure(call: Call<ExerciseTrackingResponse>, t: Throwable) {
                 Toast.makeText(
-                    this@ExerciseActivity,
-                    "Failed to save exercise data !!!",
-                    Toast.LENGTH_LONG
+                    this@ExerciseActivity, "Failed to save exercise data !!!", Toast.LENGTH_LONG
                 ).show()
             }
         })
@@ -909,8 +937,7 @@ class ExerciseActivity : AppCompatActivity() {
 
     private fun loadLogInData(): LogInData {
         val preferences = getSharedPreferences(
-            SignInActivity.LOGIN_PREFERENCE,
-            SignInActivity.PREFERENCE_MODE
+            SignInActivity.LOGIN_PREFERENCE, SignInActivity.PREFERENCE_MODE
         )
         return LogInData(
             firstName = preferences.getString(SignInActivity.FIRST_NAME, "") ?: "",
@@ -921,20 +948,92 @@ class ExerciseActivity : AppCompatActivity() {
     }
 
     private fun showExerciseInformation(context: Context, url: String) {
-        val dialogView = LayoutInflater
-            .from(context)
-            .inflate(R.layout.image_popup_modal, null, false)
+        val dialogView =
+            LayoutInflater.from(context).inflate(R.layout.image_popup_modal, null, false)
         val alertDialog = AlertDialog.Builder(context).setView(dialogView)
         val imageContainer: ImageView = dialogView.findViewById(R.id.gif_container)
-        Glide.with(context)
-            .load(url)
-            .diskCacheStrategy(DiskCacheStrategy.DATA)
+        Glide.with(context).load(url).diskCacheStrategy(DiskCacheStrategy.DATA)
             .thumbnail(Glide.with(context).load(R.drawable.gif_loading).centerCrop())
-            .transition(DrawableTransitionOptions.withCrossFade(500))
-            .override(600)
+            .transition(DrawableTransitionOptions.withCrossFade(500)).override(600)
             .into(imageContainer)
         alertDialog.setPositiveButton("Okay") { _, _ ->
         }
         alertDialog.show()
+    }
+
+    private fun askVizQuestions(quesId: Int) {
+        question = VisualQues.fromQuesId(quesId)
+        exercise.playInstruction(1500, question.questionMessage)
+        enableAskQues = true
+    }
+
+    private fun extractVisualAnswer(noRectF: RectF, yesRectF: RectF, cordRightWrist: PointF) {
+        var negAnswer = isPointInsideRectangle(noRectF, cordRightWrist)
+        var posAnswer = isPointInsideRectangle(yesRectF, cordRightWrist)
+        if ((negAnswer && !isFrontCamera) || (posAnswer && isFrontCamera)) { // Answer is negative
+            quesAnsweredAt = System.currentTimeMillis()
+            enableAskQues = false
+            when (question) {
+                VisualQues.WAS_THIS_EXERCISE_TOO_EASY -> {
+                    processAnswer(
+                        question.quesId,
+                        question.negAnsId,
+                        question.negAnsText,
+                        VisualQues.DO_YOU_FIND_THIS_EXERCISE_TO_BE_TOO_PAINFUL.quesId
+                    )
+                }
+                VisualQues.DID_YOU_FIND_THIS_EXERCISE_TO_BE_TOO_DIFFICULT -> {
+                    processAnswer(
+                        question.quesId,
+                        question.negAnsId,
+                        question.negAnsText,
+                        VisualQues.WAS_THIS_EXERCISE_TOO_EASY.quesId
+                    )
+                }
+                VisualQues.DO_YOU_FIND_THIS_EXERCISE_TO_BE_TOO_PAINFUL -> {
+                    processAnswer(question.quesId, question.negAnsId, question.negAnsText)
+                }
+            }
+        } else if ((posAnswer && !isFrontCamera) || (negAnswer && isFrontCamera)) { // Answer is positive
+            quesAnsweredAt = System.currentTimeMillis()
+            enableAskQues = false
+            processAnswer(question.quesId, question.posAnsId, question.posAnsText)
+        }
+    }
+
+    private fun processAnswer(QuestionId: Int, AnswerId: Long, AnswerValue: String) {
+        qResponse.add(
+            QResponse(
+                QuestionId = QuestionId, AnswerId = AnswerId, AnswerValue = AnswerValue
+            )
+        )
+        saveExerciseData(
+            Tenant = logInData.tenant,
+            PatientId = logInData.patientId,
+            TestId = testId!!,
+            ExerciseId = exerciseId,
+            ProtocolId = protocolId,
+            ExerciseDate = Utilities.currentDate(),
+            NoOfReps = exercise.getRepetitionCount(),
+            NoOfSets = exercise.getSetCount(),
+            NoOfWrongCount = exercise.getWrongCount(),
+            AssignSets = exercise.maxSetCount,
+            AssignReps = exercise.maxRepCount,
+            TotalTime = 0,
+            Phases = exercise.getPhaseSummary(),
+            Responses = qResponse
+        )
+        finish()
+    }
+
+    private fun processAnswer(
+        QuestionId: Int, AnswerId: Long, AnswerValue: String, nextQuesId: Int
+    ) {
+        qResponse.add(
+            QResponse(
+                QuestionId = QuestionId, AnswerId = AnswerId, AnswerValue = AnswerValue
+            )
+        )
+        askVizQuestions(nextQuesId)
     }
 }

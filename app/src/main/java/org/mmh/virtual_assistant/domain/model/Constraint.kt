@@ -28,7 +28,7 @@ data class Constraint(
 
     fun getMinMaxMedian(): trimmedValues {
         val trimmedStoredValues = trimStoredValues(storedValues = storedValues)
-        Log.d("looseConstraint", "trimmedStoredValues:: $trimmedStoredValues")
+        //Log.d("looseConstraint", "trimmedStoredValues:: $trimmedStoredValues")
         if (trimmedStoredValues.isEmpty()) {
             return trimmedValues(0, 0, 0)
         }

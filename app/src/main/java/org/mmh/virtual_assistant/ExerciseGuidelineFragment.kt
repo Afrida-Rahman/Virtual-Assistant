@@ -51,7 +51,7 @@ class ExerciseGuidelineFragment(
         val exerciseInstructionView: TextView =
             view.findViewById(R.id.exercise_instruction_guideline)
 
-        Log.d("SliderIndicatorIssue", "Indicator: $sliderIndicator")
+        //Log.d("SliderIndicatorIssue", "Indicator: $sliderIndicator")
 
         val htmlTagRegex = Regex("<[^>]*>|&nbsp|;")
         var instruction = exercise.instruction

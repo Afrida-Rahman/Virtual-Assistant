@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.RectF
 import androidx.appcompat.app.AlertDialog
 import org.mmh.virtual_assistant.domain.model.BodyPart
 import org.mmh.virtual_assistant.domain.model.ConstraintType
@@ -43,8 +44,11 @@ object VisualizationUtils {
         person: Person,
         consideredIndices: List<Int>,
         phase: Phase?,
-        isFrontCamera: Boolean = false
-    ): Bitmap {
+        isFrontCamera: Boolean = false,
+        enableAskQues: Boolean = false
+    ): VisualOutput {
+        var yesRectangle = RectF(0f,0f,0f,0f)
+        var noRectangle = RectF(0f,0f,0f,0f)
         val output = input.copy(Bitmap.Config.ARGB_8888, true)
         val canvas = Canvas(output)
         if (isFrontCamera) {
@@ -53,6 +57,38 @@ object VisualizationUtils {
         val draw = Draw(canvas, Color.WHITE, LINE_WIDTH)
         val width = draw.canvas.width
         val height = draw.canvas.height
+
+        //if enableAskQues is enabled draw buttons on the image
+        if (enableAskQues){
+            var widthWidth = output.width
+
+            // Divide screen in 5 division
+            var singleDivSize = widthWidth / 5f
+
+            var topPadding = 40f
+            val cornerRadio = 16f
+            val testSize = 30f
+
+            // get nose point to dynamically change button position
+            var left = 0f
+            var right = 0f
+            for (keyPoint in person.keyPoints){
+                if (keyPoint.bodyPart== BodyPart.LEFT_SHOULDER && keyPoint.score > .2f){
+                    left = keyPoint.coordinate.y
+                } else if (keyPoint.bodyPart== BodyPart.RIGHT_SHOULDER && keyPoint.score > .2f){
+                    right = keyPoint.coordinate.y
+                }
+            }
+            topPadding = (left+right)/2f
+
+            // Draw NO button
+            noRectangle = RectF(.1f*singleDivSize, topPadding, 1.1f*singleDivSize, topPadding + 2*singleDivSize/3)
+            draw.button(noRectangle, cornerRadio, Color.parseColor("#FF3700B3"), "NO", Color.parseColor("#FFFFFF"), testSize)
+
+            // Draw YES button
+            yesRectangle = RectF(3.9f*singleDivSize, topPadding, 4.9f*singleDivSize, topPadding + 2*singleDivSize/3)
+            draw.button(yesRectangle, cornerRadio, Color.parseColor("#FF3700B3"), "YES", Color.parseColor("#FFFFFF"), testSize)
+        }
 
         MAPPINGS.forEach { map ->
             val startPoint = person.keyPoints[map[0]].toCanvasPoint()
@@ -75,7 +111,6 @@ object VisualizationUtils {
                 }
             }
         }
-
         phase?.let {
             if (System.currentTimeMillis() - lastTimeChecked > 1000) {
                 for (i in 0 until it.constraints.size) {
@@ -165,7 +200,7 @@ object VisualizationUtils {
                 _thickness = BORDER_WIDTH
             )
         }
-        return output
+        return VisualOutput(output, noRectangle, yesRectangle)
     }
 
     fun isInsideBox(
