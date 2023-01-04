@@ -9,7 +9,6 @@ import android.graphics.Point
 import android.hardware.camera2.*
 import android.media.ImageReader
 import android.os.*
-import android.util.Log
 import android.util.Size
 import android.view.*
 import android.widget.*
@@ -28,10 +27,8 @@ import org.mmh.virtual_assistant.api.request.PhaseSummary
 import org.mmh.virtual_assistant.api.request.QResponse
 import org.mmh.virtual_assistant.api.response.ExerciseTrackingResponse
 import org.mmh.virtual_assistant.core.*
-import org.mmh.virtual_assistant.core.Utilities.isPointInsideRectangle
-import org.mmh.virtual_assistant.domain.model.BodyPart
-import org.mmh.virtual_assistant.domain.model.Device
-import org.mmh.virtual_assistant.domain.model.LogInData
+import org.mmh.virtual_assistant.core.VisualizationUtils.isPointInsideRectangle
+import org.mmh.virtual_assistant.domain.model.*
 import org.mmh.virtual_assistant.exercise.home.GeneralExercise
 import org.mmh.virtual_assistant.exercise.home.HomeExercise
 import org.mmh.virtual_assistant.ml.MoveNet
@@ -569,6 +566,7 @@ class ExerciseActivity : AppCompatActivity() {
         var score = 0f
         var outputBitmap = bitmap
         var cordRightWrist: PointF? = null
+        var cordLeftWrist: PointF? = null
         var vizOutput: VisualOutput? = null
 
         if ((exercise.getSetCount() >= exercise.maxSetCount) && !showCongrats) {
@@ -652,6 +650,8 @@ class ExerciseActivity : AppCompatActivity() {
                         for (keyPoint in person.keyPoints) {
                             if (keyPoint.bodyPart == BodyPart.RIGHT_WRIST && keyPoint.score > minConfidence) {
                                 cordRightWrist = keyPoint.coordinate
+                            } else if (keyPoint.bodyPart == BodyPart.LEFT_WRIST && keyPoint.score > minConfidence) {
+                                cordLeftWrist = keyPoint.coordinate
                             }
                         }
                     }
@@ -708,9 +708,9 @@ class ExerciseActivity : AppCompatActivity() {
         surfaceHolder.unlockCanvasAndPost(canvas)
 
         // Process visual answer
-        if (enableAskQues && cordRightWrist != null) {
+        if (enableAskQues && (cordRightWrist != null && cordLeftWrist != null)) {
             if (System.currentTimeMillis() - quesAnsweredAt > quesDelay) {
-                extractVisualAnswer(vizOutput!!.noRectF, vizOutput!!.yesRectF, cordRightWrist!!)
+                extractVisualAnswer(vizOutput!!.button.negRectF, vizOutput!!.button.posRectF, cordRightWrist!!, cordLeftWrist!!)
             }
         }
 
@@ -725,7 +725,8 @@ class ExerciseActivity : AppCompatActivity() {
             message = "Congratulations! You have successfully completed the exercise. Please be prepared for the next one.",
             positiveButtonText = "Ok",
             positiveButtonAction = {
-                askQuestions(context)
+//                askQuestions(context)
+                askVizQuestions(10001000)
             },
             negativeButtonText = null,
             negativeButtonAction = {}).show()
@@ -967,10 +968,20 @@ class ExerciseActivity : AppCompatActivity() {
         enableAskQues = true
     }
 
-    private fun extractVisualAnswer(noRectF: RectF, yesRectF: RectF, cordRightWrist: PointF) {
-        var negAnswer = isPointInsideRectangle(noRectF, cordRightWrist)
-        var posAnswer = isPointInsideRectangle(yesRectF, cordRightWrist)
-        if ((negAnswer && !isFrontCamera) || (posAnswer && isFrontCamera)) { // Answer is negative
+    private fun extractVisualAnswer(noRectF: RectF, yesRectF: RectF, cordRightWrist: PointF, cordLeftWrist: PointF) {
+        var negAnswer: Boolean
+        var posAnswer: Boolean
+        if(isFrontCamera){
+            negAnswer = isPointInsideRectangle(noRectF, cordRightWrist)
+            posAnswer = isPointInsideRectangle(yesRectF, cordLeftWrist)
+        } else {
+            negAnswer = isPointInsideRectangle(noRectF, cordLeftWrist)
+            posAnswer = isPointInsideRectangle(yesRectF, cordRightWrist)
+        }
+        if (negAnswer && posAnswer){
+            quesAnsweredAt = System.currentTimeMillis()
+            Toast.makeText(applicationContext, "Please select one answer.", Toast.LENGTH_SHORT).show()
+        } else if ((negAnswer && !isFrontCamera) || (posAnswer && isFrontCamera)) { // Answer is negative
             quesAnsweredAt = System.currentTimeMillis()
             enableAskQues = false
             when (question) {
@@ -978,7 +989,7 @@ class ExerciseActivity : AppCompatActivity() {
                     processAnswer(
                         question.quesId,
                         question.negAnsId,
-                        question.negAnsText,
+                        "No",
                         VisualQues.DO_YOU_FIND_THIS_EXERCISE_TO_BE_TOO_PAINFUL.quesId
                     )
                 }
@@ -986,54 +997,48 @@ class ExerciseActivity : AppCompatActivity() {
                     processAnswer(
                         question.quesId,
                         question.negAnsId,
-                        question.negAnsText,
+                        "No",
                         VisualQues.WAS_THIS_EXERCISE_TOO_EASY.quesId
                     )
                 }
                 VisualQues.DO_YOU_FIND_THIS_EXERCISE_TO_BE_TOO_PAINFUL -> {
-                    processAnswer(question.quesId, question.negAnsId, question.negAnsText)
+                    processAnswer(question.quesId, question.negAnsId, "No")
                 }
             }
         } else if ((posAnswer && !isFrontCamera) || (negAnswer && isFrontCamera)) { // Answer is positive
             quesAnsweredAt = System.currentTimeMillis()
             enableAskQues = false
-            processAnswer(question.quesId, question.posAnsId, question.posAnsText)
+            processAnswer(question.quesId, question.posAnsId, "Yes")
         }
     }
 
-    private fun processAnswer(QuestionId: Int, AnswerId: Long, AnswerValue: String) {
+    private fun processAnswer(QuestionId: Int, AnswerId: Long, AnswerValue: String, nextQuesId: Int = 0) {
         qResponse.add(
             QResponse(
                 QuestionId = QuestionId, AnswerId = AnswerId, AnswerValue = AnswerValue
             )
         )
-        saveExerciseData(
-            Tenant = logInData.tenant,
-            PatientId = logInData.patientId,
-            TestId = testId!!,
-            ExerciseId = exerciseId,
-            ProtocolId = protocolId,
-            ExerciseDate = Utilities.currentDate(),
-            NoOfReps = exercise.getRepetitionCount(),
-            NoOfSets = exercise.getSetCount(),
-            NoOfWrongCount = exercise.getWrongCount(),
-            AssignSets = exercise.maxSetCount,
-            AssignReps = exercise.maxRepCount,
-            TotalTime = 0,
-            Phases = exercise.getPhaseSummary(),
-            Responses = qResponse
-        )
-        finish()
-    }
+        if(nextQuesId > 0){
+            askVizQuestions(nextQuesId)
+        } else {
+            saveExerciseData(
+                Tenant = logInData.tenant,
+                PatientId = logInData.patientId,
+                TestId = testId!!,
+                ExerciseId = exerciseId,
+                ProtocolId = protocolId,
+                ExerciseDate = Utilities.currentDate(),
+                NoOfReps = exercise.getRepetitionCount(),
+                NoOfSets = exercise.getSetCount(),
+                NoOfWrongCount = exercise.getWrongCount(),
+                AssignSets = exercise.maxSetCount,
+                AssignReps = exercise.maxRepCount,
+                TotalTime = 0,
+                Phases = exercise.getPhaseSummary(),
+                Responses = qResponse
+            )
+            finish()
+        }
 
-    private fun processAnswer(
-        QuestionId: Int, AnswerId: Long, AnswerValue: String, nextQuesId: Int
-    ) {
-        qResponse.add(
-            QResponse(
-                QuestionId = QuestionId, AnswerId = AnswerId, AnswerValue = AnswerValue
-            )
-        )
-        askVizQuestions(nextQuesId)
     }
 }

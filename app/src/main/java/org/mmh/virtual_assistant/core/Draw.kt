@@ -1,6 +1,7 @@
 package org.mmh.virtual_assistant.core
 
 import android.graphics.*
+import org.mmh.virtual_assistant.domain.model.Point
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin

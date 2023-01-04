@@ -2,15 +2,10 @@ package org.mmh.virtual_assistant.core
 
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.RectF
+import android.graphics.*
 import androidx.appcompat.app.AlertDialog
-import org.mmh.virtual_assistant.domain.model.BodyPart
-import org.mmh.virtual_assistant.domain.model.ConstraintType
-import org.mmh.virtual_assistant.domain.model.Person
-import org.mmh.virtual_assistant.domain.model.Phase
+import org.mmh.virtual_assistant.domain.model.*
+import org.mmh.virtual_assistant.domain.model.Point
 
 object VisualizationUtils {
     const val MIN_CONFIDENCE = 0.3f
@@ -83,11 +78,11 @@ object VisualizationUtils {
 
             // Draw NO button
             noRectangle = RectF(.1f*singleDivSize, topPadding, 1.1f*singleDivSize, topPadding + 2*singleDivSize/3)
-            draw.button(noRectangle, cornerRadio, Color.parseColor("#FF3700B3"), "NO", Color.parseColor("#FFFFFF"), testSize)
+            draw.button(noRectangle, cornerRadio, Color.parseColor("#081859"), "NO", Color.parseColor("#FFFFFF"), testSize)
 
             // Draw YES button
             yesRectangle = RectF(3.9f*singleDivSize, topPadding, 4.9f*singleDivSize, topPadding + 2*singleDivSize/3)
-            draw.button(yesRectangle, cornerRadio, Color.parseColor("#FF3700B3"), "YES", Color.parseColor("#FFFFFF"), testSize)
+            draw.button(yesRectangle, cornerRadio, Color.parseColor("#081859"), "YES", Color.parseColor("#FFFFFF"), testSize)
         }
 
         MAPPINGS.forEach { map ->
@@ -200,7 +195,7 @@ object VisualizationUtils {
                 _thickness = BORDER_WIDTH
             )
         }
-        return VisualOutput(output, noRectangle, yesRectangle)
+        return VisualOutput(output, VisualButton(yesRectangle, noRectangle))
     }
 
     fun isInsideBox(
@@ -241,5 +236,12 @@ object VisualizationUtils {
             }
         }
         return alertDialog
+    }
+
+    fun isPointInsideRectangle(
+        rectF: RectF,
+        point: PointF
+    ): Boolean {
+        return point.x > rectF.left && point.x < rectF.right && point.y > rectF.top && point.y < rectF.bottom
     }
 }

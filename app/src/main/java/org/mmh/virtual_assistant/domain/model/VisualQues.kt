@@ -1,12 +1,10 @@
-package org.mmh.virtual_assistant.core
+package org.mmh.virtual_assistant.domain.model
 
 enum class VisualQues(
     val quesId: Int,
     val questionMessage: String,
     val posAnsId: Long,
-    val negAnsId: Long,
-    val posAnsText: String = "Yes",
-    val negAnsText: String = "No"
+    val negAnsId: Long
 ) {
     DO_YOU_FIND_THIS_EXERCISE_TO_BE_TOO_PAINFUL(
         10001002,

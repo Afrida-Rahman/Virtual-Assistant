@@ -1,4 +1,4 @@
-package org.mmh.virtual_assistant.core
+package org.mmh.virtual_assistant.domain.model
 
 data class Point(
     val x: Float,
