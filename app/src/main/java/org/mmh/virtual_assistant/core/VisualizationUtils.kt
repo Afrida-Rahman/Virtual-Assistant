@@ -2,16 +2,13 @@ package org.mmh.virtual_assistant.core
 
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
+import android.graphics.*
 import androidx.appcompat.app.AlertDialog
-import org.mmh.virtual_assistant.domain.model.BodyPart
-import org.mmh.virtual_assistant.domain.model.ConstraintType
-import org.mmh.virtual_assistant.domain.model.Person
-import org.mmh.virtual_assistant.domain.model.Phase
+import org.mmh.virtual_assistant.domain.model.*
+import org.mmh.virtual_assistant.domain.model.Point
 
 object VisualizationUtils {
+    const val MIN_CONFIDENCE = 0.3f
     private const val LINE_WIDTH = 3f
     private const val BORDER_WIDTH = 10f
     private var lastTimeChecked: Long = 0L
@@ -21,13 +18,15 @@ object VisualizationUtils {
         listOf(BodyPart.LEFT_EYE.position, BodyPart.NOSE.position),
         listOf(BodyPart.NOSE.position, BodyPart.RIGHT_EYE.position),
         listOf(BodyPart.RIGHT_EYE.position, BodyPart.RIGHT_EAR.position),
-        listOf(BodyPart.LEFT_SHOULDER.position, BodyPart.RIGHT_SHOULDER.position),
+        listOf(BodyPart.LEFT_SHOULDER.position, BodyPart.MID_SHOULDER.position),
+        listOf(BodyPart.MID_SHOULDER.position, BodyPart.RIGHT_SHOULDER.position),
         listOf(BodyPart.LEFT_SHOULDER.position, BodyPart.LEFT_ELBOW.position),
         listOf(BodyPart.LEFT_ELBOW.position, BodyPart.LEFT_WRIST.position),
         listOf(BodyPart.LEFT_SHOULDER.position, BodyPart.LEFT_HIP.position),
         listOf(BodyPart.LEFT_HIP.position, BodyPart.LEFT_KNEE.position),
         listOf(BodyPart.LEFT_KNEE.position, BodyPart.LEFT_ANKLE.position),
-        listOf(BodyPart.LEFT_HIP.position, BodyPart.RIGHT_HIP.position),
+        listOf(BodyPart.LEFT_HIP.position, BodyPart.MID_HIP.position),
+        listOf(BodyPart.MID_HIP.position, BodyPart.RIGHT_HIP.position),
         listOf(BodyPart.RIGHT_SHOULDER.position, BodyPart.RIGHT_ELBOW.position),
         listOf(BodyPart.RIGHT_ELBOW.position, BodyPart.RIGHT_WRIST.position),
         listOf(BodyPart.RIGHT_SHOULDER.position, BodyPart.RIGHT_HIP.position),
@@ -38,9 +37,13 @@ object VisualizationUtils {
     fun drawBodyKeyPoints(
         input: Bitmap,
         person: Person,
+        consideredIndices: List<Int>,
         phase: Phase?,
-        isFrontCamera: Boolean = false
-    ): Bitmap {
+        isFrontCamera: Boolean = false,
+        enableAskQues: Boolean = false
+    ): VisualOutput {
+        var yesRectangle = RectF(0f,0f,0f,0f)
+        var noRectangle = RectF(0f,0f,0f,0f)
         val output = input.copy(Bitmap.Config.ARGB_8888, true)
         val canvas = Canvas(output)
         if (isFrontCamera) {
@@ -50,26 +53,59 @@ object VisualizationUtils {
         val width = draw.canvas.width
         val height = draw.canvas.height
 
+        //if enableAskQues is enabled draw buttons on the image
+        if (enableAskQues){
+            var widthWidth = output.width
+
+            // Divide screen in 5 division
+            var singleDivSize = widthWidth / 5f
+
+            var topPadding = 40f
+            val cornerRadio = 16f
+            val testSize = 30f
+
+            // get nose point to dynamically change button position
+            var left = 0f
+            var right = 0f
+            for (keyPoint in person.keyPoints){
+                if (keyPoint.bodyPart== BodyPart.LEFT_SHOULDER && keyPoint.score > .2f){
+                    left = keyPoint.coordinate.y
+                } else if (keyPoint.bodyPart== BodyPart.RIGHT_SHOULDER && keyPoint.score > .2f){
+                    right = keyPoint.coordinate.y
+                }
+            }
+            topPadding = (left+right)/2f
+
+            // Draw NO button
+            noRectangle = RectF(.1f*singleDivSize, topPadding, 1.1f*singleDivSize, topPadding + 2*singleDivSize/3)
+            draw.button(noRectangle, cornerRadio, Color.parseColor("#081859"), "NO", Color.parseColor("#FFFFFF"), testSize)
+
+            // Draw YES button
+            yesRectangle = RectF(3.9f*singleDivSize, topPadding, 4.9f*singleDivSize, topPadding + 2*singleDivSize/3)
+            draw.button(yesRectangle, cornerRadio, Color.parseColor("#081859"), "YES", Color.parseColor("#FFFFFF"), testSize)
+        }
+
         MAPPINGS.forEach { map ->
             val startPoint = person.keyPoints[map[0]].toCanvasPoint()
             val endPoint = person.keyPoints[map[1]].toCanvasPoint()
-            if (isFrontCamera) {
-                draw.line(
-                    Point(
-                        output.width - startPoint.x,
-                        startPoint.y
-                    ),
-                    Point(
-                        output.width - endPoint.x,
-                        endPoint.y
-                    ),
-                    _color = Color.rgb(170, 255, 0)
-                )
-            } else {
-                draw.line(startPoint, endPoint, _color = Color.rgb(170, 255, 0))
+            if (person.keyPoints[map[0]].score >= MIN_CONFIDENCE && person.keyPoints[map[1]].score >= MIN_CONFIDENCE) {
+                if (isFrontCamera) {
+                    draw.line(
+                        Point(
+                            output.width - startPoint.x,
+                            startPoint.y
+                        ),
+                        Point(
+                            output.width - endPoint.x,
+                            endPoint.y
+                        ),
+                        _color = Color.rgb(170, 255, 0)
+                    )
+                } else {
+                    draw.line(startPoint, endPoint, _color = Color.rgb(170, 255, 0))
+                }
             }
         }
-
         phase?.let {
             if (System.currentTimeMillis() - lastTimeChecked > 1000) {
                 for (i in 0 until it.constraints.size) {
@@ -93,58 +129,63 @@ object VisualizationUtils {
             for (constraint in it.constraints) {
                 val startPoint = person.keyPoints[constraint.startPointIndex].toCanvasPoint()
                 val endPoint = person.keyPoints[constraint.endPointIndex].toCanvasPoint()
-                if (constraint.type == ConstraintType.ANGLE) {
-                    val middlePoint = person.keyPoints[constraint.middlePointIndex].toCanvasPoint()
-                    if (isFrontCamera) {
-                        draw.angle(
-                            Point(
-                                output.width - startPoint.x,
-                                startPoint.y
-                            ),
-                            Point(
-                                output.width - middlePoint.x,
-                                middlePoint.y
-                            ),
-                            Point(
-                                output.width - endPoint.x,
-                                endPoint.y
-                            ),
-                            _clockWise = !constraint.clockWise,
-                            color = constraint.color
-                        )
+                if (person.keyPoints[constraint.startPointIndex].score >= MIN_CONFIDENCE && person.keyPoints[constraint.endPointIndex].score >= MIN_CONFIDENCE) {
+                    if (constraint.type == ConstraintType.ANGLE) {
+                        val middlePoint =
+                            person.keyPoints[constraint.middlePointIndex].toCanvasPoint()
+                        if (person.keyPoints[constraint.middlePointIndex].score >= MIN_CONFIDENCE) {
+                            if (isFrontCamera) {
+                                draw.angle(
+                                    Point(
+                                        output.width - startPoint.x,
+                                        startPoint.y
+                                    ),
+                                    Point(
+                                        output.width - middlePoint.x,
+                                        middlePoint.y
+                                    ),
+                                    Point(
+                                        output.width - endPoint.x,
+                                        endPoint.y
+                                    ),
+                                    _clockWise = !constraint.clockWise,
+                                    color = constraint.color
+                                )
+                            } else {
+                                draw.angle(
+                                    startPoint,
+                                    middlePoint,
+                                    endPoint,
+                                    _clockWise = constraint.clockWise,
+                                    color = constraint.color
+                                )
+                            }
+                        }
                     } else {
-                        draw.angle(
-                            startPoint,
-                            middlePoint,
-                            endPoint,
-                            _clockWise = constraint.clockWise,
-                            color = constraint.color
-                        )
-                    }
-                } else {
-                    if (isFrontCamera) {
-                        draw.line(
-                            Point(
-                                output.width - startPoint.x,
-                                startPoint.y
-                            ),
-                            Point(
-                                output.width - endPoint.x,
-                                endPoint.y
-                            ),
-                            _color = constraint.color
-                        )
-                    } else {
-                        draw.line(
-                            startPoint,
-                            endPoint,
-                            _color = constraint.color
-                        )
+                        if (isFrontCamera) {
+                            draw.line(
+                                Point(
+                                    output.width - startPoint.x,
+                                    startPoint.y
+                                ),
+                                Point(
+                                    output.width - endPoint.x,
+                                    endPoint.y
+                                ),
+                                _color = constraint.color
+                            )
+                        } else {
+                            draw.line(
+                                startPoint,
+                                endPoint,
+                                _color = constraint.color
+                            )
+                        }
                     }
                 }
             }
         }
-        if (!isInsideBox(person, height, width)) {
+        if (!isInsideBox(person, consideredIndices, height, width)) {
             draw.tetragonal(
                 Point(0f, 0f),
                 Point(0f, height.toFloat()),
@@ -154,16 +195,23 @@ object VisualizationUtils {
                 _thickness = BORDER_WIDTH
             )
         }
-        return output
+        return VisualOutput(output, VisualButton(yesRectangle, noRectangle))
     }
 
-    fun isInsideBox(person: Person, canvasHeight: Int, canvasWidth: Int): Boolean {
+    fun isInsideBox(
+        person: Person,
+        consideredIndices: List<Int>,
+        canvasHeight: Int,
+        canvasWidth: Int
+    ): Boolean {
         var rightPosition = true
         person.keyPoints.forEach {
-            val x = it.coordinate.x
-            val y = it.coordinate.y
-            if (x < 0 || x > canvasWidth || y < 0 || y > canvasHeight) {
-                rightPosition = false
+            if (it.bodyPart.position in consideredIndices) {
+                val x = it.coordinate.x
+                val y = it.coordinate.y
+                if (x < 0 || x > canvasWidth || y < 0 || y > canvasHeight) {
+                    rightPosition = false
+                }
             }
         }
         return rightPosition
@@ -188,5 +236,12 @@ object VisualizationUtils {
             }
         }
         return alertDialog
+    }
+
+    fun isPointInsideRectangle(
+        rectF: RectF,
+        point: PointF
+    ): Boolean {
+        return point.x > rectF.left && point.x < rectF.right && point.y > rectF.top && point.y < rectF.bottom
     }
 }

@@ -1,0 +1,6 @@
+package org.mmh.virtual_assistant.exercise.home.fitness
+
+import android.content.Context
+import org.mmh.virtual_assistant.exercise.home.HomeExercise
+
+class ShortHeadBicepsCurlInStanding(context: Context) : HomeExercise(context = context, id = 630)

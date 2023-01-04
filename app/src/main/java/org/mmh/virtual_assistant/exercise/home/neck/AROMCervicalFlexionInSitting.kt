@@ -4,5 +4,4 @@ import android.content.Context
 import org.mmh.virtual_assistant.exercise.home.HomeExercise
 
 class AROMCervicalFlexionInSitting(context: Context) :
-    HomeExercise(context = context, id = 66) {
-}
+    HomeExercise(context = context, id = 66)

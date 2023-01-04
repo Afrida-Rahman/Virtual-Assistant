@@ -4,5 +4,4 @@ import android.content.Context
 import org.mmh.virtual_assistant.exercise.home.HomeExercise
 
 class CervicalExtensionStretchInSitting(context: Context) :
-    HomeExercise(context = context, id = 537)  {
-}
+    HomeExercise(context = context, id = 537)

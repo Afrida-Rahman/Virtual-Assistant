@@ -40,7 +40,7 @@ class AssessmentListFragment(
                 )
             )
         }
-        testList.sortBy { it.totalExercises }
+        testList.sortBy { it.testDate }
         testList.reverse()
         searchAssessment.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(searchQuery: String): Boolean {
@@ -77,5 +77,4 @@ class AssessmentListFragment(
         adapter.adapter = AssessmentListAdapter(testList)
         return view
     }
-
 }

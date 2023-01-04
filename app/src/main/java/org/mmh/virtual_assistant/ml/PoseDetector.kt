@@ -14,7 +14,7 @@ limitations under the License.
 ==============================================================================
 */
 
-package org.mmh.virtual_assistant
+package org.mmh.virtual_assistant.ml
 
 import android.graphics.Bitmap
 import org.mmh.virtual_assistant.domain.model.Person

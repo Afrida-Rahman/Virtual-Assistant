@@ -8,4 +8,4 @@ class TrunkFlexionInStanding(
 ) : HomeExercise(
     context = context,
     id = 178
-) {}
+)

@@ -6,35 +6,22 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import org.mmh.virtual_assistant.R
+import org.mmh.virtual_assistant.api.response.PhaseInfo1
 
 class ImageSliderAdapter(
     private val context: Context,
-//    private var phaseNumber: List<String>,
-//    private var phaseDescription: List<String>,
-    private var phaseImages: List<String>
+    private val phases: List<PhaseInfo1>
 ) : RecyclerView.Adapter<ImageSliderAdapter.ImageSliderViewHolder>() {
 
     class ImageSliderViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val phaseNumber: TextView = view.findViewById(R.id.phase_number)
         val phaseDescription: TextView = view.findViewById(R.id.phase_description)
         val phaseImage: ImageView = view.findViewById(R.id.phase_image)
-
-        init {
-            phaseImage.setOnClickListener { v: View ->
-                val position = absoluteAdapterPosition
-                Toast.makeText(
-                    phaseImage.context,
-                    "clicked on phase ${position + 1}",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        }
     }
 
     override fun onCreateViewHolder(
@@ -47,11 +34,11 @@ class ImageSliderAdapter(
     }
 
     override fun onBindViewHolder(holder: ImageSliderViewHolder, position: Int) {
-//        holder.phaseNumber.text = phaseNumber[position]
-//        holder.phaseDescription.text = phaseDescription[position]
-        val image = phaseImages[position]
+        val phase = phases[position]
+        holder.phaseNumber.text = phase.PhaseNumber.toString()
+        holder.phaseDescription.text = phase.PhaseDialogue
         Glide.with(context)
-            .load(image)
+            .load(phase.CapturedImage)
             .diskCacheStrategy(DiskCacheStrategy.DATA)
             .thumbnail(Glide.with(context).load(R.drawable.gif_loading).centerCrop())
             .transition(DrawableTransitionOptions.withCrossFade(300))
@@ -59,7 +46,5 @@ class ImageSliderAdapter(
             .into(holder.phaseImage)
     }
 
-    override fun getItemCount(): Int {
-        return phaseImages.size
-    }
+    override fun getItemCount(): Int = phases.size
 }

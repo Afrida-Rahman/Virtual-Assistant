@@ -2,7 +2,6 @@
     <!-- Base application theme. -->
     <style name="Theme.VirtualAssistant" parent="Theme.MaterialComponents.Light.NoActionBar">
         <!-- Primary brand color. -->
-        <!-- Primary brand color. -->
         <item name="colorPrimary">@color/blue</item>
         <item name="colorPrimaryVariant">@color/purple_700</item>
         <item name="colorOnPrimary">@color/white</item>
@@ -17,8 +16,18 @@
         <item name="android:textSize">16sp</item>
         <item name="titleTextColor">@color/white</item>
     </style>
+
+    <style name="Toolbar.TitleText" parent="TextAppearance.Widget.AppCompat.Toolbar.Title">
+        <item name="android:textSize">16sp</item>
+        <item name="titleTextColor">@color/white</item>
+    </style>
+
     <style name="Theme.VirtualAssistant.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
     </style>
+
+    <style name="Theme.VirtualAssistant.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+
+    <style name="Theme.VirtualAssistant.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
 </resources>

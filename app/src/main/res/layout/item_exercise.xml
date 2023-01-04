@@ -24,7 +24,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toStartOf="@+id/layout_exercise_details"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent">
 
@@ -45,12 +44,11 @@
                     android:id="@+id/exercise_status"
                     android:layout_width="20dp"
                     android:layout_height="20dp"
-                    android:paddingStart="4dp"
-                    android:paddingEnd="4dp"
+                    android:layout_margin="4dp"
                     android:contentDescription="@string/active"
-                    android:src="@drawable/ic_exercise_active"
-                    app:layout_constraintStart_toStartOf="@id/item_exercise_image"
-                    app:layout_constraintTop_toTopOf="@id/item_exercise_image" />
+                    android:src="@drawable/ic_check1"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -59,14 +57,14 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
+                app:layout_constraintStart_toEndOf="@id/layout_exercise_image"
+                app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toEndOf="@+id/layout_exercise_image"
-                app:layout_constraintTop_toTopOf="parent">
+                app:layout_constraintEnd_toStartOf="@id/btn_guideline">
 
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:id="@+id/layout_exercise_name"
-                    android:layout_width="270dp"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent">
@@ -79,19 +77,7 @@
                         android:textColor="@color/black"
                         android:textSize="18sp"
                         android:textStyle="bold"
-                        app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent" />
-
-                    <ImageButton
-                        android:id="@+id/btn_guideline"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="12dp"
-                        android:background="@android:color/transparent"
-                        android:contentDescription="@string/guideline_icon"
-                        android:src="@drawable/ic_guideline"
-                        app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintTop_toTopOf="parent" />
 
                 </androidx.constraintlayout.widget.ConstraintLayout>
@@ -120,6 +106,19 @@
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
+            <ImageButton
+                android:id="@+id/btn_guideline"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@android:color/transparent"
+                android:contentDescription="@string/guideline"
+                android:minWidth="48dp"
+                android:minHeight="48dp"
+                android:src="@drawable/ic_guideline"
+                android:textSize="11sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
         </androidx.constraintlayout.widget.ConstraintLayout>
 
         <androidx.constraintlayout.widget.ConstraintLayout
@@ -127,7 +126,7 @@
             android:layout_height="wrap_content">
 
             <Button
-                android:id="@+id/btn_start_exercise"
+                android:id="@+id/btn_start_workout"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="6dp"
@@ -147,7 +146,7 @@
                 android:textSize="11sp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toEndOf="@+id/btn_start_exercise"
+                app:layout_constraintStart_toEndOf="@id/btn_start_workout"
                 app:layout_constraintTop_toTopOf="parent"
                 android:layout_marginEnd="6dp" />
 

@@ -4,5 +4,4 @@ import android.content.Context
 import org.mmh.virtual_assistant.exercise.home.HomeExercise
 
 class IsometricCervicalLateralBendingInSitting(context: Context) :
-    HomeExercise(context = context, id = 78) {
-}
+    HomeExercise(context = context, id = 78)

@@ -11,5 +11,6 @@ data class Exercise(
     val RepetitionInCount: Int,
     val FrequencyInDay: Int,
     val Phases: List<PhaseInfo1>,
-    val active: Boolean = true
+    val active: Boolean = true,
+    val EvalExerciseProperties: List<EvalExerciseProperty>
 )

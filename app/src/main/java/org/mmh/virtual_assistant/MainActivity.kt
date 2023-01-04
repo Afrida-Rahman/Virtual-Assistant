@@ -1,17 +1,17 @@
 package org.mmh.virtual_assistant
 
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.DisplayMetrics
 import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.ActionBarDrawerToggle
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.GravityCompat
 import androidx.fragment.app.Fragment
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import org.mmh.virtual_assistant.api.IExerciseService
@@ -37,6 +37,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var logInData: LogInData
     private var width: Int = 0
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -51,10 +52,9 @@ class MainActivity : AppCompatActivity() {
         binding.patientName.text =
             getString(R.string.hello_patient_name_i_m_emma).format("${logInData.firstName} ${logInData.lastName}")
 
-        CoroutineScope(Dispatchers.IO).launch {
+        CoroutineScope(IO).launch {
             getAssessmentDetails(logInData.patientId, logInData.tenant)
         }
-
         menuToggle = ActionBarDrawerToggle(
             this,
             binding.drawerLayout,
@@ -205,5 +205,4 @@ class MainActivity : AppCompatActivity() {
             }
         })
     }
-
 }
