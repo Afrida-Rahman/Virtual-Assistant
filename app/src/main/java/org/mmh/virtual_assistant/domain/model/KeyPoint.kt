@@ -1,7 +1,6 @@
 package org.mmh.virtual_assistant.domain.model
 
 import android.graphics.PointF
-import org.mmh.virtual_assistant.core.Point
 
 data class KeyPoint(
     val bodyPart: BodyPart,

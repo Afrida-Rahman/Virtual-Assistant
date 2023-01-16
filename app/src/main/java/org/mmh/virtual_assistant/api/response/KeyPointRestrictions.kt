@@ -1,3 +1,6 @@
 package org.mmh.virtual_assistant.api.response
 
-class KeyPointRestrictions : ArrayList<KeyPointRestrictionsItem>()
+class KeyPointRestrictions(
+    val ExerciseId: Int,
+    val Phases: List<PhaseDetails>
+)

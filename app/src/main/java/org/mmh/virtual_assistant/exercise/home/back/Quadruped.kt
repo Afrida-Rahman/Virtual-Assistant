@@ -8,4 +8,4 @@ class Quadruped(
 ) : HomeExercise(
     context = context,
     id = 345
-) {}
+)

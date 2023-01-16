@@ -3,13 +3,18 @@ package org.mmh.virtual_assistant.core
 import android.content.Context
 import org.mmh.virtual_assistant.exercise.home.*
 import org.mmh.virtual_assistant.exercise.home.ankle.AROMAnkleDorsiflexionInSitting
+import org.mmh.virtual_assistant.exercise.home.ankle.AnklePumpInSupine
+import org.mmh.virtual_assistant.exercise.home.ankle.HeelSlides
 import org.mmh.virtual_assistant.exercise.home.back.*
 import org.mmh.virtual_assistant.exercise.home.elbow.*
+import org.mmh.virtual_assistant.exercise.home.fitness.*
 import org.mmh.virtual_assistant.exercise.home.functional.*
+import org.mmh.virtual_assistant.exercise.home.golf.*
 import org.mmh.virtual_assistant.exercise.home.hip.*
 import org.mmh.virtual_assistant.exercise.home.knee.*
 import org.mmh.virtual_assistant.exercise.home.neck.*
 import org.mmh.virtual_assistant.exercise.home.shoulder.*
+import org.mmh.virtual_assistant.exercise.home.yoga.*
 
 object Exercises {
 
@@ -153,11 +158,78 @@ object Exercises {
             HalfKneelingToStandingUnsupported(context),
             StandingToHalfKneelingSupported(context),
             StandingToHalfKneelingUnsupported(context),
+            OneLeggedHingeInStanding(context),
+            AdvancedBirdDog(context),
+            BeginnerWallSquats(context),
+            IntermediateWallSquats(context),
+            KneelingSideKick(context),
+            Crawling(context),
+            AnklePumpInSupine(context),
+            HeelSlides(context),
+            CrawlingStepThroughInQuadruped(context),
+            BilateralHeelSlides(context),
+            WallPushUps(context),
+            KneelingToHalfKneelingWithNormalSupport(context),
+            HipAbductionInSideLying(context),
+            HipAbductionWithWeightsInSideLying(context),
+            IsometricHipAbductionInSitting(context),
+            SquatsWithChair(context),
+            ScapularRetractionElbowStraightWeightsStanding(context),
+            ScapularRetractionElbowFlexed90DegreeWithWeightsStanding(context),
+            ScapularStabilizationKneelingStabilityBallSingleHand(context),
+            RightShoulderInternalRotationWithResistanceBand(context),
+            PiriformisStretchInSupine(context),
+            MountainClimbers(context),
+            SquatsShoulderOverheadWithWeights(context),
+            VerticalRowsWithResistanceBandInStanding(context),
+            DeskPushUps(context),
+            HipFlexorStretchInHalfKneeling(context),
+            BirdDogWithWeightsInQuadruped(context),
+            ModifiedSupermanInProne(context),
+            ShoulderOverheadPressWithWeightsForearmNeutralInSitting(context),
+            FunctionalSeries1(context),
+            Rite1(context),
+            Rite2(context),
+            Rite3(context),
+            Rite4(context),
+            Rite5(context),
+            OneLeggedHingeRightInStanding(context),
+            OneLeggedSquats(context),
+            SwimmerInProne(context),
+            IsometricCervicalCombinationStrengtheningInSitting(context),
+            IsometricCervicalCombinationStrengtheningInStanding(context),
+            CervicalFlexionWithResistanceBandInSitting(context),
+            CervicalExtensionWithResistanceBandInSitting(context),
+            ClassicBicepsCurlInStanding(context),
+            HammerCurlsInStanding(context),
+            OverheadPulleysInSitting(context),
+            WallClimbInStanding(context),
+            PreacherCurlInStanding(context),
+            ShortHeadBicepsCurlInStanding(context),
+            ClassicBicepsCurlInSitting(context),
+            HammerCurlsInSitting(context),
+            ShortHeadBicepsCurlInSitting(context),
+            LongHeadBicepsCurlInSitting(context),
+            SidePlankWithElbowFlexed(context),
+            MiniSquatsWithResistanceBand(context),
+            ShoulderSupportedIr90DegreesElbowFlexionWithResistanceBandInStanding(context),
+            ShoulderSupportedEr90DegreesElbowFlexionWithResistanceBandInStanding(context),
+            SupermanInProne(context),
+            SidePlankWithElbowExtended(context),
+            ToeUps(context),
+            TrunkRotationInHalfKneeling(context),
+            SplitSquats(context),
+            BenchPressWithWeightsInSupineWithKneesFlexed(context),
+            BendOverRowsWithWeightsInTripod(context),
+            BendOverRowsRightWithWeightsInTripod(context),
+            RightArmWallClimbingInStanding(context),
+            RightPreacherCurlsInStanding(context),
+            RightTrunkRotationInHalfKneeling(context),
+            LateralRaisesWithWeightsInStanding(context)
         )
     }
 
-    fun get(context: Context, exerciseId: Int): HomeExercise {
-        return get(context).filter { it.id == exerciseId }[0]
+    fun get(context: Context, exerciseId: Int): HomeExercise? {
+        return get(context).find { it.id == exerciseId }
     }
-
 }

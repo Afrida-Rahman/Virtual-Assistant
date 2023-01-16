@@ -5,6 +5,7 @@ import org.mmh.virtual_assistant.SignInActivity
 import org.mmh.virtual_assistant.domain.model.APiUrl
 import org.mmh.virtual_assistant.domain.model.BodyPart
 import org.mmh.virtual_assistant.domain.model.LogInData
+import org.mmh.virtual_assistant.domain.model.Point
 import java.util.*
 import kotlin.math.acos
 import kotlin.math.sqrt
@@ -104,7 +105,34 @@ object Utilities {
             "RIGHT_KNEE".lowercase() -> BodyPart.RIGHT_KNEE.position
             "LEFT_ANKLE".lowercase() -> BodyPart.LEFT_ANKLE.position
             "RIGHT_ANKLE".lowercase() -> BodyPart.RIGHT_ANKLE.position
+            "MID_SHOULDER".lowercase() -> BodyPart.MID_SHOULDER.position
+            "MID_HIP".lowercase() -> BodyPart.MID_HIP.position
             else -> -1
+        }
+    }
+
+    fun getIndexName(name: Int): String {
+        return when (name) {
+            BodyPart.NOSE.position -> "NOSE".lowercase()
+            BodyPart.LEFT_EYE.position -> "LEFT_EYE".lowercase()
+            BodyPart.RIGHT_EYE.position -> "RIGHT_EYE".lowercase()
+            BodyPart.LEFT_EAR.position -> "LEFT_EAR".lowercase()
+            BodyPart.RIGHT_EAR.position -> "RIGHT_EAR".lowercase()
+            BodyPart.LEFT_SHOULDER.position -> "LEFT_SHOULDER".lowercase()
+            BodyPart.RIGHT_SHOULDER.position -> "RIGHT_SHOULDER".lowercase()
+            BodyPart.LEFT_ELBOW.position -> "LEFT_ELBOW".lowercase()
+            BodyPart.RIGHT_ELBOW.position -> "RIGHT_ELBOW".lowercase()
+            BodyPart.LEFT_WRIST.position -> "LEFT_WRIST".lowercase()
+            BodyPart.RIGHT_WRIST.position -> "RIGHT_WRIST".lowercase()
+            BodyPart.LEFT_HIP.position -> "LEFT_HIP".lowercase()
+            BodyPart.RIGHT_HIP.position -> "RIGHT_HIP".lowercase()
+            BodyPart.LEFT_KNEE.position -> "LEFT_KNEE".lowercase()
+            BodyPart.RIGHT_KNEE.position -> "RIGHT_KNEE".lowercase()
+            BodyPart.LEFT_ANKLE.position -> "LEFT_ANKLE".lowercase()
+            BodyPart.RIGHT_ANKLE.position -> "RIGHT_ANKLE".lowercase()
+            BodyPart.MID_SHOULDER.position -> "MID_SHOULDER".lowercase()
+            BodyPart.MID_HIP.position -> "MID_HIP".lowercase()
+            else -> ""
         }
     }
 
