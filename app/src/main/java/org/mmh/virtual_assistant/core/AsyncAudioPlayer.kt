@@ -314,6 +314,12 @@ class AsyncAudioPlayer(private val context: Context) {
         const val PICK_UP = "pick up"
         const val LIFT_YOUR_ARMS_AND_LEGS_UP = "lift your arms and legs up"
         const val PUSH_YOUR_ANKLE_AND_HOLD = "push your ankle and hold"
+        const val EXTEND_YOUR_ELBOWS = "extend your elbows"
+        const val LEFT_LEG_STEP_BACK = "left leg step back"
+        const val MOVE_YOUR_TRUNK_FORWARD_AND_HOLD = "move your trunk forward and hold"
+        const val RAISE_YOUR_LEFT_ARM_FORWARD = "raise your left arm forward"
+        const val RAISE_YOUR_RIGHT_ARM_FORWARD = "raise your right arm forward"
+        const val RIGHT_LEG_STEP_BACK = "right leg step back"
         const val DID_YOU_FIND_THIS_EXERCISE_TO_BE_TOO_DIFFICULT = "did you find this exercise to be too difficult?"
         const val WAS_THIS_EXERCISE_TOO_EASY = "was this exercise too easy?"
         const val DO_YOU_FIND_THIS_EXERCISE_TO_BE_TOO_PAINFUL = "do you find this exercise to be too painful?"
@@ -1332,18 +1338,15 @@ class AsyncAudioPlayer(private val context: Context) {
             text = text,
             player = MediaPlayer.create(context, R.raw.push_your_ankle_and_hold)
         )
-        DID_YOU_FIND_THIS_EXERCISE_TO_BE_TOO_DIFFICULT -> Instruction(
-            text = text,
-            player = MediaPlayer.create(context, R.raw.did_you_find_this_exercise_to_be_too_difficult)
-        )
-        WAS_THIS_EXERCISE_TOO_EASY -> Instruction(
-            text = text,
-            player = MediaPlayer.create(context, R.raw.was_this_exercise_too_easy)
-        )
-        DO_YOU_FIND_THIS_EXERCISE_TO_BE_TOO_PAINFUL -> Instruction(
-            text = text,
-            player = MediaPlayer.create(context, R.raw.do_you_find_this_exercise_to_be_too_painful)
-        )
+        EXTEND_YOUR_ELBOWS -> Instruction(text = text, player = MediaPlayer.create(context, R.raw.extend_your_elbows))
+        LEFT_LEG_STEP_BACK -> Instruction(text = text, player = MediaPlayer.create(context, R.raw.left_leg_step_back))
+        MOVE_YOUR_TRUNK_FORWARD_AND_HOLD -> Instruction(text = text, player = MediaPlayer.create(context, R.raw.move_your_trunk_forward_and_hold))
+        RAISE_YOUR_LEFT_ARM_FORWARD -> Instruction(text = text, player = MediaPlayer.create(context, R.raw.raise_your_left_arm_forward))
+        RAISE_YOUR_RIGHT_ARM_FORWARD -> Instruction(text = text, player = MediaPlayer.create(context, R.raw.raise_your_right_arm_forward))
+        RIGHT_LEG_STEP_BACK -> Instruction(text = text, player = MediaPlayer.create(context, R.raw.right_leg_step_back))
+        DID_YOU_FIND_THIS_EXERCISE_TO_BE_TOO_DIFFICULT -> Instruction(text = text,player = MediaPlayer.create(context, R.raw.did_you_find_this_exercise_to_be_too_difficult))
+        WAS_THIS_EXERCISE_TOO_EASY -> Instruction(text = text, player = MediaPlayer.create(context, R.raw.was_this_exercise_too_easy))
+        DO_YOU_FIND_THIS_EXERCISE_TO_BE_TOO_PAINFUL -> Instruction(text = text, player = MediaPlayer.create(context, R.raw.do_you_find_this_exercise_to_be_too_painful))
         else -> Instruction(text = text, player = null)
     }
 }
