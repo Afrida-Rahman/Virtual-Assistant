@@ -4,12 +4,14 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.content.res.Resources
 import android.graphics.*
 import android.graphics.Point
 import android.hardware.camera2.*
 import android.media.ImageReader
 import android.os.*
 import android.util.Size
+import android.util.TypedValue
 import android.view.*
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
@@ -588,19 +590,17 @@ class ExerciseActivity : AppCompatActivity() {
                     val phase = exercise.getPhase()
                     MainScope().launch {
                         if (enableAskQues) {
+                            phaseDialogueDisplay.visibility = View.VISIBLE
+                            gifButton.visibility = View.GONE
+                            phaseDialogueDisplay.text = question.questionMessage
+                            val width = Resources.getSystem().displayMetrics.widthPixels
+                            val textSize = 0.0394f*width - 0.5f*question.questionMessage.length
+                            phaseDialogueDisplay.setTextSize(TypedValue.COMPLEX_UNIT_DIP,textSize)
+                            phaseDialogueDisplay.maxLines = 1
                             findViewById<Button>(R.id.btn_done).visibility = View.GONE
                             exercise.getPersonDistance(person).let {
                                 distanceDisplay.text = getString(R.string.distance_text).format(it)
-                                if (it <= 5f) {
-                                    phaseDialogueDisplay.textSize = 30f
-                                } else if (5f < it && it <= 10f) {
-                                    phaseDialogueDisplay.textSize = 50f
-                                } else {
-                                    phaseDialogueDisplay.textSize = 70f
-                                }
                             }
-                            phaseDialogueDisplay.visibility = View.VISIBLE
-                            phaseDialogueDisplay.text = question.questionMessage
                         } else {
                             countDisplay.text = getString(R.string.right_count_text).format(
                                 exercise.getRepetitionCount(), exercise.getSetCount()
