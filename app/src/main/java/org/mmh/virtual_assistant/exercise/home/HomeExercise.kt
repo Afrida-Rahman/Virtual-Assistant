@@ -492,7 +492,7 @@ abstract class HomeExercise(
         }
     }
 
-    fun setNewConstraints() {
+    private fun setNewConstraints() {
         trackIndex = 0
         //Log.d("setCount", "right count phases: $rightCountPhases \n \n ")
         rightCountPhases.forEach { phase ->
