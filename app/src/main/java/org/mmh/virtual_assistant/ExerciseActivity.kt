@@ -40,6 +40,7 @@ import retrofit2.Callback
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.*
 
 
 @Suppress("DEPRECATION")
@@ -269,7 +270,12 @@ class ExerciseActivity : AppCompatActivity() {
 //                Responses = listOf()
 //            )
 //            askQuestions(this)
-            askVizQuestions(10001000)
+            if(!exercise.isAsyncAudioPlayerInitialized()){
+                Toast.makeText(applicationContext,"Please wait for initialization.", Toast.LENGTH_SHORT).show()
+            } else {
+                askVizQuestions(10001000)
+            }
+
         }
 
         pauseButton.setOnClickListener {
@@ -721,15 +727,29 @@ class ExerciseActivity : AppCompatActivity() {
     }
 
     private fun congratsPatient(context: Context) {
-        VisualizationUtils.getAlertDialogue(context = context,
+        val alert = VisualizationUtils.getAlertDialogue(context = context,
             message = "Congratulations! You have successfully completed the exercise. Please be prepared for the next one.",
             positiveButtonText = "Ok",
             positiveButtonAction = {
+                for (instruction in exercise.instructions){
+                    if (instruction.text.lowercase() == AsyncAudioPlayer.CONGRATS){
+                        instruction.player?.stop()   
+                    }
+                }
 //                askQuestions(context)
                 askVizQuestions(10001000)
             },
             negativeButtonText = null,
             negativeButtonAction = {}).show()
+
+        val timer = Timer()
+        timer.schedule(object : TimerTask() {
+            override fun run() {
+                alert.dismiss()
+                askVizQuestions(10001000)
+                timer.cancel()
+            }
+        }, 9000)
     }
 
     private fun askQuestions(context: Context) {
