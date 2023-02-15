@@ -273,6 +273,10 @@ class ExerciseActivity : AppCompatActivity() {
             if(!exercise.isAsyncAudioPlayerInitialized()){
                 Toast.makeText(applicationContext,"Please wait for initialization.", Toast.LENGTH_SHORT).show()
             } else {
+                for (instruction in exercise.instructions){
+                    instruction.player?.stop()
+                }
+                pauseButton.visibility = View.GONE
                 askVizQuestions(10001000)
             }
 
@@ -733,7 +737,7 @@ class ExerciseActivity : AppCompatActivity() {
             positiveButtonAction = {
                 for (instruction in exercise.instructions){
                     if (instruction.text.lowercase() == AsyncAudioPlayer.CONGRATS){
-                        instruction.player?.stop()   
+                        instruction.player?.stop()
                     }
                 }
 //                askQuestions(context)

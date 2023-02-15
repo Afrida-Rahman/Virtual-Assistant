@@ -68,7 +68,7 @@ abstract class HomeExercise(
     private var phaseEnterTime = System.currentTimeMillis()
     private var takingRest = false
     private var manuallyPaused = false
-    lateinit var asyncAudioPlayer: AsyncAudioPlayer
+    private lateinit var asyncAudioPlayer: AsyncAudioPlayer
     fun isAsyncAudioPlayerInitialized() = ::asyncAudioPlayer.isInitialized
     val instructions: MutableList<Instruction> = mutableListOf()
     var trackIndex: Int = 0
