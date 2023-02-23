@@ -63,7 +63,7 @@ class ExerciseActivity : AppCompatActivity(), RecognitionCallback {
         private const val PREVIEW_WIDTH = 640
         private const val PREVIEW_HEIGHT = 480
 
-        private const val ACTIVATION_KEYWORD = "Hi"
+        private const val ACTIVATION_KEYWORD = "Hello"
         private const val RECORD_AUDIO_REQUEST_CODE = 101
     }
 
@@ -1183,6 +1183,10 @@ class ExerciseActivity : AppCompatActivity(), RecognitionCallback {
     override fun onResults(results: List<String>, scores: FloatArray?) {
         val text = results.joinToString(separator = "\n")
         Log.i("Recognition","onResults : $text")
+        results.firstOrNull { it.contains(other = "Cannot perform exercise", ignoreCase = true) }
+            ?.let {
+                findViewById<Button>(R.id.btn_done).performClick()
+            }
         textView.text = text
     }
 
