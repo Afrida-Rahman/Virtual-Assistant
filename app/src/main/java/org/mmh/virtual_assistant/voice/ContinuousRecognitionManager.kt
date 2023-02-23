@@ -8,7 +8,9 @@ import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.util.Log
 import androidx.core.content.getSystemService
+import org.mmh.virtual_assistant.ExerciseActivity.Companion.TAG
 
 class ContinuousRecognitionManager(
     private val context: Context,
@@ -18,6 +20,7 @@ class ContinuousRecognitionManager(
 ) : RecognitionListener {
 
     private var isActivated: Boolean = false
+    private var keyWordDetected: Boolean = false
     private val speech: SpeechRecognizer by lazy { SpeechRecognizer.createSpeechRecognizer(context) }
     private val audioManager: AudioManager? = context.getSystemService()
 
@@ -63,6 +66,7 @@ class ContinuousRecognitionManager(
         audioManager?.let {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 val flag = if (mute) AudioManager.ADJUST_MUTE else AudioManager.ADJUST_UNMUTE
+                Log.d(TAG, "muteRecognition: Here flag: $flag mute: $mute")
                 it.adjustStreamVolume(AudioManager.STREAM_NOTIFICATION, flag, 0)
                 it.adjustStreamVolume(AudioManager.STREAM_ALARM, flag, 0)
                 it.adjustStreamVolume(AudioManager.STREAM_MUSIC, flag, 0)
@@ -83,7 +87,11 @@ class ContinuousRecognitionManager(
     }
 
     override fun onReadyForSpeech(params: Bundle) {
-        muteRecognition(shouldMute || !isActivated)
+        if(keyWordDetected){
+            keyWordDetected = false
+            muteRecognition(shouldMute || !isActivated)
+        }
+
         callback?.onReadyForSpeech(params)
     }
 
@@ -139,6 +147,7 @@ class ContinuousRecognitionManager(
                 matches.firstOrNull { it.contains(other = activationKeyword, ignoreCase = true) }
                     ?.let {
                         isActivated = true
+                        keyWordDetected = true
                         callback?.onKeywordDetected()
                     }
                 startRecognition()

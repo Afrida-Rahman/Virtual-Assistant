@@ -1185,6 +1185,7 @@ class ExerciseActivity : AppCompatActivity(), RecognitionCallback {
         Log.i("Recognition","onResults : $text")
         results.firstOrNull { it.contains(other = "Cannot perform exercise", ignoreCase = true) }
             ?.let {
+                recognitionManager.destroyRecognizer()
                 findViewById<Button>(R.id.btn_done).performClick()
             }
         textView.text = text
