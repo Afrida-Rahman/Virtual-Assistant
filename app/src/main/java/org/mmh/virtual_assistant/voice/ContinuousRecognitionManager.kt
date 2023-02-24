@@ -69,7 +69,10 @@ class ContinuousRecognitionManager(
                 Log.d(TAG, "muteRecognition: Here flag: $flag mute: $mute")
                 it.adjustStreamVolume(AudioManager.STREAM_NOTIFICATION, flag, 0)
                 it.adjustStreamVolume(AudioManager.STREAM_ALARM, flag, 0)
-                it.adjustStreamVolume(AudioManager.STREAM_MUSIC, flag, 0)
+                if (keyWordDetected){
+                    keyWordDetected = false
+                    it.adjustStreamVolume(AudioManager.STREAM_MUSIC, flag, 0)
+                }
                 it.adjustStreamVolume(AudioManager.STREAM_RING, flag, 0)
                 it.adjustStreamVolume(AudioManager.STREAM_SYSTEM, flag, 0)
             } else {
@@ -87,11 +90,7 @@ class ContinuousRecognitionManager(
     }
 
     override fun onReadyForSpeech(params: Bundle) {
-        if(keyWordDetected){
-            keyWordDetected = false
-            muteRecognition(shouldMute || !isActivated)
-        }
-
+        muteRecognition(shouldMute || !isActivated)
         callback?.onReadyForSpeech(params)
     }
 
