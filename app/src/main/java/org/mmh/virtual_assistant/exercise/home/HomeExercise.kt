@@ -69,7 +69,8 @@ abstract class HomeExercise(
     private var takingRest = false
     private var manuallyPaused = false
     private lateinit var asyncAudioPlayer: AsyncAudioPlayer
-    private val instructions: MutableList<Instruction> = mutableListOf()
+    fun isAsyncAudioPlayerInitialized() = ::asyncAudioPlayer.isInitialized
+    val instructions: MutableList<Instruction> = mutableListOf()
     var trackIndex: Int = 0
     private val commonExerciseInstructions = listOf(
         AsyncAudioPlayer.GET_READY,
